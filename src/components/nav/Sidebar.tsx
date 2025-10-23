@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Upload, Mail, Plus, Sparkles } from "lucide-react";
+import { Users, Upload, Mail, Plus, Sparkles, FileText, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: Sparkles },
   { href: "/clients", label: "Clients", icon: Users },
+  { href: "/templates", label: "Templates", icon: FileText },
   { href: "/import", label: "Import", icon: Upload },
   { href: "/campaigns", label: "Campaigns", icon: Mail },
+  { href: "/settings", label: "Settings", icon: Settings },
   { href: "/campaigns/new", label: "New Campaign", icon: Plus, highlighted: true },
 ];
 
