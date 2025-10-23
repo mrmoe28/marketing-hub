@@ -132,6 +132,35 @@ export default async function ClientDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Custom Fields Section */}
+      {client.customFields && typeof client.customFields === "object" && Object.keys(client.customFields).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Additional Information</CardTitle>
+            <CardDescription>Custom data imported from CSV</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Object.entries(client.customFields as Record<string, unknown>).map(([key, value]) => (
+                <div key={key} className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {key
+                      .replace(/([A-Z])/g, " $1")
+                      .replace(/_/g, " ")
+                      .replace(/\b\w/g, (l) => l.toUpperCase())}
+                  </p>
+                  <p className="text-sm font-semibold">
+                    {value !== null && value !== undefined && String(value).trim() !== ""
+                      ? String(value)
+                      : "—"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
