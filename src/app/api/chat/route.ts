@@ -84,9 +84,11 @@ Custom fields available: ${Object.keys(customFieldSample).join(", ")}
     }
 
     console.log("Calling Anthropic API...");
+    console.log("Model:", "claude-3-5-sonnet-20241022");
+    console.log("Max tokens:", 1024);
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-3-5-sonnet-20241022",
       max_tokens: 1024,
       system: `You are a helpful AI assistant for Clientbase, an email marketing platform.
 
@@ -113,27 +115,45 @@ If you need to search the web for information (like best practices, regulations,
       clientDataIncluded: includeClientData,
     });
   } catch (error) {
-    console.error("Chat error details:", {
-      message: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-      name: error instanceof Error ? error.name : undefined,
-    });
+    // Log full error details for debugging
+    console.error("=== CHAT API ERROR ===");
+    console.error("Error type:", typeof error);
+    console.error("Error constructor:", error?.constructor?.name);
+    console.error("Error message:", error instanceof Error ? error.message : String(error));
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
+
+    // Log Anthropic-specific error details if available
+    if (error && typeof error === "object" && "status" in error) {
+      console.error("HTTP Status:", (error as any).status);
+      console.error("Error response:", (error as any).error);
+    }
 
     // Provide user-friendly error messages
     let errorMessage = "Failed to connect to AI service. Please try again.";
+    let debugInfo = "";
 
     if (error instanceof Error) {
-      if (error.message.includes("API key")) {
+      debugInfo = error.message;
+
+      if (error.message.includes("API key") || error.message.includes("401")) {
         errorMessage = "AI service authentication failed. Please contact support.";
       } else if (error.message.includes("timeout") || error.message.includes("ECONNREFUSED")) {
         errorMessage = "Connection timeout. Please check your internet and try again.";
-      } else if (error.message.includes("rate limit")) {
+      } else if (error.message.includes("rate limit") || error.message.includes("429")) {
         errorMessage = "Too many requests. Please wait a moment and try again.";
+      } else if (error.message.includes("model")) {
+        errorMessage = "AI model configuration error. Please contact support.";
       }
     }
 
+    console.error("Sending error response:", errorMessage);
+    console.error("Debug info:", debugInfo);
+
     return NextResponse.json(
-      { error: errorMessage },
+      {
+        error: errorMessage,
+        debug: process.env.NODE_ENV === "development" ? debugInfo : undefined
+      },
       { status: 500 }
     );
   }
