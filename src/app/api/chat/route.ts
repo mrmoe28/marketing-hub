@@ -103,6 +103,8 @@ You help users understand their client data, answer questions about their import
 
 ${context}
 
+IMPORTANT: When you have access to client data (above), ALWAYS use it to answer questions about clients, statistics, counts, locations, etc. Never give generic responses when you have the actual data.
+
 Be concise, friendly, and actionable. If asked about specific data or statistics, reference the actual client data provided.
 If you need to search the web for information (like best practices, regulations, etc.), mention that you can do that.`
           },
