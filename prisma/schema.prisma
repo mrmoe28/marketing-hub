@@ -135,3 +135,60 @@ model Event {
 
   client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
+
+// AI Agent Memory & Context
+model CompanyProfile {
+  id                String   @id @default(cuid())
+  companyName       String
+  companyLogo       String?  // URL to logo
+  companyWebsite    String?
+  industry          String?
+  description       String?  @db.Text
+  brandVoice        String?  @db.Text // e.g., "Professional and friendly", "Casual and fun"
+  primaryColor      String?  // Hex color for branding
+  secondaryColor    String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Contact details
+  contactEmail      String?
+  contactPhone      String?
+  address           String?
+
+  // Email signature defaults
+  defaultSignature  String?  @db.Text
+  defaultFromName   String?
+  defaultFromEmail  String?
+}
+
+model AgentMemory {
+  id        String   @id @default(cuid())
+  key       String   @unique  // e.g., "user_preferences", "common_templates"
+  value     Json                // Flexible JSON storage for any data
+  category  String?             // e.g., "user", "template", "preference"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ConversationHistory {
+  id        String   @id @default(cuid())
+  messages  Json     // Array of {role, content, timestamp}
+  summary   String?  @db.Text // AI-generated summary of conversation
+  topics    String[] // Topics discussed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  subject     String
+  bodyHtml    String   @db.Text
+  bodyText    String   @db.Text
+  category    String?  // e.g., "welcome", "promotion", "update"
+  description String?  @db.Text
+  thumbnail   String?  // Preview image URL
+  isAiCreated Boolean  @default(false) // True if created by AI agent
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
