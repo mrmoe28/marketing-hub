@@ -58,7 +58,29 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
         const errors: Array<{ row: number; message: string }> = [];
         const seen = new Set<string>();
 
+        // Check if CSV has email column
+        if (results.meta?.fields && !results.meta.fields.includes("email")) {
+          const availableFields = results.meta.fields.join(", ");
+          errors.push({
+            row: 0,
+            message: `CSV must have an "email" column. Found columns: ${availableFields}`,
+          });
+          resolve({ data: [], errors });
+          return;
+        }
+
         results.data.forEach((row: unknown, index: number) => {
+          // Check if row is actually empty (all values are empty/null/undefined)
+          const rowObj = row as Record<string, unknown>;
+          const hasAnyData = Object.values(rowObj).some((val) =>
+            val !== null && val !== undefined && String(val).trim() !== ""
+          );
+
+          // Skip completely empty rows silently
+          if (!hasAnyData) {
+            return;
+          }
+
           try {
             const parsed = ClientRowSchema.parse(row);
 
