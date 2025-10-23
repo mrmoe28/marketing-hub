@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 import { Users, Upload } from "lucide-react";
+import { useMemo } from "react";
 
 type ClientWithTags = Client & {
   tags: (TagOnClient & { tag: Tag })[];
@@ -22,7 +23,29 @@ interface ClientTableProps {
   clients: ClientWithTags[];
 }
 
+// Helper to format field names nicely
+function formatFieldName(fieldName: string): string {
+  return fieldName
+    .replace(/([A-Z])/g, " $1")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase())
+    .trim();
+}
+
 export function ClientTable({ clients }: ClientTableProps) {
+  // Collect all unique custom field names across all clients
+  const customFieldNames = useMemo(() => {
+    const fieldNames = new Set<string>();
+    clients.forEach((client) => {
+      if (client.customFields && typeof client.customFields === "object") {
+        Object.keys(client.customFields as Record<string, unknown>).forEach((key) => {
+          fieldNames.add(key);
+        });
+      }
+    });
+    return Array.from(fieldNames).sort();
+  }, [clients]);
+
   if (clients.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border/50 p-12 text-center">
@@ -44,67 +67,100 @@ export function ClientTable({ clients }: ClientTableProps) {
   }
 
   return (
-    <div className="rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead>Email</TableHead>
-            <TableHead>Name</TableHead>
-            <TableHead>Company</TableHead>
-            <TableHead>Location</TableHead>
-            <TableHead>Tags</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {clients.map((client) => (
-            <TableRow key={client.id} className="group">
-              <TableCell>
-                <Link
-                  href={`/clients/${client.id}`}
-                  className="font-medium text-blue-600 hover:underline dark:text-blue-400"
-                >
-                  {client.email}
-                </Link>
-              </TableCell>
-              <TableCell>
-                {client.firstName || client.lastName
-                  ? `${client.firstName || ""} ${client.lastName || ""}`.trim()
-                  : <span className="text-muted-foreground">—</span>}
-              </TableCell>
-              <TableCell>
-                {client.company || <span className="text-muted-foreground">—</span>}
-              </TableCell>
-              <TableCell>
-                {client.city && client.state ? (
-                  `${client.city}, ${client.state}`
-                ) : client.city || client.state ? (
-                  client.city || client.state
-                ) : (
-                  <span className="text-muted-foreground">—</span>
-                )}
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-wrap gap-1">
-                  {client.tags.length > 0 ? (
-                    client.tags.slice(0, 3).map((t) => (
-                      <Badge key={t.tagId} variant="secondary" className="text-xs">
-                        {t.tag.name}
-                      </Badge>
-                    ))
-                  ) : (
-                    <span className="text-sm text-muted-foreground">—</span>
-                  )}
-                  {client.tags.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{client.tags.length - 3}
-                    </Badge>
-                  )}
-                </div>
-              </TableCell>
+    <div className="relative">
+      {/* Scroll hint */}
+      {customFieldNames.length > 0 && (
+        <div className="mb-2 text-xs text-muted-foreground">
+          Scroll right to see all {5 + customFieldNames.length} columns →
+        </div>
+      )}
+
+      <div className="overflow-x-auto rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="sticky left-0 z-10 bg-background min-w-[200px]">Email</TableHead>
+              <TableHead className="min-w-[150px]">Name</TableHead>
+              <TableHead className="min-w-[150px]">Company</TableHead>
+              <TableHead className="min-w-[150px]">Location</TableHead>
+              <TableHead className="min-w-[120px]">Phone</TableHead>
+              <TableHead className="min-w-[150px]">Tags</TableHead>
+              {/* Dynamic custom field columns */}
+              {customFieldNames.map((fieldName) => (
+                <TableHead key={fieldName} className="min-w-[150px]">
+                  {formatFieldName(fieldName)}
+                </TableHead>
+              ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {clients.map((client) => {
+              const customFields = (client.customFields || {}) as Record<string, unknown>;
+
+              return (
+                <TableRow key={client.id} className="group">
+                  <TableCell className="sticky left-0 z-10 bg-background group-hover:bg-accent">
+                    <Link
+                      href={`/clients/${client.id}`}
+                      className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      {client.email}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    {client.firstName || client.lastName
+                      ? `${client.firstName || ""} ${client.lastName || ""}`.trim()
+                      : <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell>
+                    {client.company || <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell>
+                    {client.city && client.state ? (
+                      `${client.city}, ${client.state}`
+                    ) : client.city || client.state ? (
+                      client.city || client.state
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {client.phone || <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {client.tags.length > 0 ? (
+                        client.tags.slice(0, 2).map((t) => (
+                          <Badge key={t.tagId} variant="secondary" className="text-xs">
+                            {t.tag.name}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                      {client.tags.length > 2 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{client.tags.length - 2}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  {/* Dynamic custom field values */}
+                  {customFieldNames.map((fieldName) => (
+                    <TableCell key={fieldName} className="font-mono text-sm">
+                      {customFields[fieldName] !== null &&
+                       customFields[fieldName] !== undefined &&
+                       String(customFields[fieldName]).trim() !== ""
+                        ? String(customFields[fieldName])
+                        : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
