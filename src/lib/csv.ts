@@ -2,7 +2,7 @@ import Papa from "papaparse";
 import { z } from "zod";
 
 const ClientRowSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().min(1, "Email is required").email("Invalid email format"),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   company: z.string().optional(),
@@ -33,10 +33,8 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
         const mapping: Record<string, string> = {
           firstname: "firstName",
           first_name: "firstName",
-          "first name": "firstName",
           lastname: "lastName",
           last_name: "lastName",
-          "last name": "lastName",
           companyname: "company",
           company_name: "company",
           phonenumber: "phone",
@@ -49,6 +47,7 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
           zip: "postalCode",
           zipcode: "postalCode",
           postal_code: "postalCode",
+          postalcode: "postalCode",
           tag: "tags",
         };
 

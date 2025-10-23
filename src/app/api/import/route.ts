@@ -16,10 +16,11 @@ export async function POST(request: NextRequest) {
     const fileText = await file.text();
     const { data, errors } = await parseCSV(fileText);
 
-    if (errors.length > 0) {
+    // If no valid data and only errors, fail completely
+    if (data.length === 0 && errors.length > 0) {
       return NextResponse.json(
         {
-          error: "CSV parsing errors",
+          error: "No valid rows found in CSV",
           details: errors,
         },
         { status: 400 }
@@ -112,6 +113,8 @@ export async function POST(request: NextRequest) {
       updated,
       total: created + updated,
       tagCounts,
+      errors: errors.length > 0 ? errors : undefined,
+      warnings: errors.length > 0 ? `${errors.length} row(s) skipped due to errors` : undefined,
     });
   } catch (error) {
     console.error("Import error:", error);

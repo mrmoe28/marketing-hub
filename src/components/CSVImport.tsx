@@ -32,14 +32,31 @@ export function CSVImport() {
       const result = await response.json();
 
       if (!response.ok) {
+        // Show detailed errors if available
+        if (result.details && Array.isArray(result.details)) {
+          const errorList = result.details.slice(0, 3).map((e: { row: number; message: string }) =>
+            `Row ${e.row}: ${e.message}`
+          ).join("; ");
+          const moreErrors = result.details.length > 3 ? ` (and ${result.details.length - 3} more)` : "";
+          throw new Error(`${result.error}. ${errorList}${moreErrors}`);
+        }
         throw new Error(result.error || "Import failed");
       }
 
       setSuccess(true);
-      toast({
-        title: "Import successful",
-        description: `Created ${result.created}, updated ${result.updated} clients`,
-      });
+
+      if (result.warnings) {
+        toast({
+          title: "Import completed with warnings",
+          description: `Created ${result.created}, updated ${result.updated} clients. ${result.warnings}`,
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Import successful",
+          description: `Created ${result.created}, updated ${result.updated} clients`,
+        });
+      }
 
       setFile(null);
 
