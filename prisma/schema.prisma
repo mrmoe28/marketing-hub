@@ -1,0 +1,136 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  firstName      String?
+  lastName       String?
+  company        String?
+  phone          String?
+  address1       String?
+  address2       String?
+  city           String?
+  state          String?
+  postalCode     String?
+  country        String?
+  tags           TagOnClient[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  filesPrefix    String?
+  jobs           EmailJob[]
+  events         Event[]
+  subscriptions  Subscription[]
+}
+
+model Tag {
+  id      String        @id @default(cuid())
+  name    String        @unique
+  clients TagOnClient[]
+}
+
+model TagOnClient {
+  clientId   String
+  tagId      String
+  assignedAt DateTime @default(now())
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([clientId, tagId])
+}
+
+model Segment {
+  id        String   @id @default(cuid())
+  name      String
+  queryJson Json
+  createdAt DateTime @default(now())
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  name        String
+  subject     String
+  fromEmail   String
+  fromName    String?
+  bodyHtml    String         @db.Text
+  bodyText    String         @db.Text
+  status      CampaignStatus @default(DRAFT)
+  scheduledAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  jobs        EmailJob[]
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+}
+
+model EmailJob {
+  id          String    @id @default(cuid())
+  campaignId  String
+  clientId    String
+  toEmail     String
+  status      JobStatus @default(PENDING)
+  error       String?
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  unsubAt     DateTime?
+  openToken   String    @default(cuid())
+  clickToken  String    @default(cuid())
+  unsubToken  String    @default(cuid())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([clientId])
+  @@index([status])
+  @@index([openToken])
+  @@index([clickToken])
+  @@index([unsubToken])
+}
+
+enum JobStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  SUPPRESSED
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  clientId  String
+  channel   String
+  status    String
+  token     String   @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([channel, clientId])
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  type      String
+  clientId  String?
+  jobId     String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
