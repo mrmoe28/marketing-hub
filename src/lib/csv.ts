@@ -82,7 +82,7 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
 
         resolve({ data, errors });
       },
-      error: (error) => {
+      error: (error: Error) => {
         resolve({
           data: [],
           errors: [{ row: 0, message: error.message }],
