@@ -23,9 +23,9 @@ export interface ParsedCSVResult {
   errors: Array<{ row: number; message: string }>;
 }
 
-export async function parseCSV(file: File): Promise<ParsedCSVResult> {
+export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
   return new Promise((resolve) => {
-    Papa.parse(file, {
+    Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
       transformHeader: (header) => {

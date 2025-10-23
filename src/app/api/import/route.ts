@@ -12,7 +12,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const { data, errors } = await parseCSV(file);
+    // Convert File to text for server-side parsing
+    const fileText = await file.text();
+    const { data, errors } = await parseCSV(fileText);
 
     if (errors.length > 0) {
       return NextResponse.json(
