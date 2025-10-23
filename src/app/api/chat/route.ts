@@ -84,11 +84,11 @@ Custom fields available: ${Object.keys(customFieldSample).join(", ")}
     }
 
     console.log("Calling Anthropic API...");
-    console.log("Model:", "claude-3-5-sonnet-20241022");
+    console.log("Model:", "claude-sonnet-4-5-20250929");
     console.log("Max tokens:", 1024);
 
     const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-20241022",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 1024,
       system: `You are a helpful AI assistant for Clientbase, an email marketing platform.
 
