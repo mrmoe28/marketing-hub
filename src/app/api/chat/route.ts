@@ -87,11 +87,14 @@ Custom fields available: ${Object.keys(customFieldSample).join(", ")}
     console.log("Calling Anthropic API...");
     console.log("Model:", "claude-sonnet-4-5");
     console.log("Max tokens:", 1024);
+    console.log("API Key check:", apiKey.substring(0, 20));
 
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: 1024,
-      system: `You are a helpful AI assistant for Clientbase, an email marketing platform.
+    let response;
+    try {
+      response = await anthropic.messages.create({
+        model: "claude-sonnet-4-5",
+        max_tokens: 1024,
+        system: `You are a helpful AI assistant for Clientbase, an email marketing platform.
 
 You help users understand their client data, answer questions about their imported information, and provide insights.
 
@@ -99,13 +102,24 @@ ${context}
 
 Be concise, friendly, and actionable. If asked about specific data or statistics, reference the actual client data provided.
 If you need to search the web for information (like best practices, regulations, etc.), mention that you can do that.`,
-      messages: [
-        {
-          role: "user",
-          content: message,
-        },
-      ],
-    });
+        messages: [
+          {
+            role: "user",
+            content: message,
+          },
+        ],
+      });
+      console.log("✅ Anthropic API call successful!");
+    } catch (apiError: any) {
+      console.error("❌ Anthropic API call failed");
+      console.error("Error name:", apiError?.name);
+      console.error("Error message:", apiError?.message);
+      console.error("Error status:", apiError?.status);
+      console.error("Error type:", apiError?.type);
+      console.error("Error error:", JSON.stringify(apiError?.error, null, 2));
+      console.error("Full error object:", JSON.stringify(apiError, Object.getOwnPropertyNames(apiError), 2));
+      throw apiError;
+    }
 
     console.log("Got response from Anthropic");
     const text = response.content[0].type === "text" ? response.content[0].text : "";
