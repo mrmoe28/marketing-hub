@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
 // Set longer timeout for AI responses
 export const maxDuration = 60;
@@ -22,19 +22,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if API key is configured
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
     console.log("API key status:", apiKey ? `Present (${apiKey.substring(0, 10)}...)` : "Missing");
 
     if (!apiKey) {
-      console.error("ANTHROPIC_API_KEY not configured");
+      console.error("OPENAI_API_KEY not configured");
       return NextResponse.json(
         { error: "AI service not configured. Please contact support." },
         { status: 500 }
       );
     }
 
-    console.log("Initializing Anthropic client...");
-    const anthropic = new Anthropic({
+    console.log("Initializing OpenAI client...");
+    const openai = new OpenAI({
       apiKey: apiKey,
     });
 
@@ -84,34 +84,37 @@ Custom fields available: ${Object.keys(customFieldSample).join(", ")}
       }
     }
 
-    console.log("Calling Anthropic API...");
-    console.log("Model:", "claude-sonnet-4-5");
+    console.log("Calling OpenAI API...");
+    console.log("Model:", "gpt-4o-mini");
     console.log("Max tokens:", 1024);
     console.log("API Key check:", apiKey.substring(0, 20));
 
     let response;
     try {
-      response = await anthropic.messages.create({
-        model: "claude-sonnet-4-5",
+      response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         max_tokens: 1024,
-        system: `You are a helpful AI assistant for Clientbase, an email marketing platform.
+        messages: [
+          {
+            role: "system",
+            content: `You are a helpful AI assistant for Clientbase, an email marketing platform.
 
 You help users understand their client data, answer questions about their imported information, and provide insights.
 
 ${context}
 
 Be concise, friendly, and actionable. If asked about specific data or statistics, reference the actual client data provided.
-If you need to search the web for information (like best practices, regulations, etc.), mention that you can do that.`,
-        messages: [
+If you need to search the web for information (like best practices, regulations, etc.), mention that you can do that.`
+          },
           {
             role: "user",
             content: message,
           },
         ],
       });
-      console.log("✅ Anthropic API call successful!");
+      console.log("✅ OpenAI API call successful!");
     } catch (apiError: any) {
-      console.error("❌ Anthropic API call failed");
+      console.error("❌ OpenAI API call failed");
       console.error("Error name:", apiError?.name);
       console.error("Error message:", apiError?.message);
       console.error("Error status:", apiError?.status);
@@ -121,8 +124,8 @@ If you need to search the web for information (like best practices, regulations,
       throw apiError;
     }
 
-    console.log("Got response from Anthropic");
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    console.log("Got response from OpenAI");
+    const text = response.choices[0]?.message?.content || "";
 
     console.log("Sending response to client");
     return NextResponse.json({
@@ -137,7 +140,7 @@ If you need to search the web for information (like best practices, regulations,
     console.error("Error message:", error instanceof Error ? error.message : String(error));
     console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
 
-    // Log Anthropic-specific error details if available
+    // Log OpenAI-specific error details if available
     if (error && typeof error === "object" && "status" in error) {
       console.error("HTTP Status:", (error as any).status);
       console.error("Error response:", (error as any).error);
