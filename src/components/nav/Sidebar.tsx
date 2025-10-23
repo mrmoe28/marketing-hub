@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Users, Upload, Mail, Plus, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: Sparkles },
@@ -17,17 +18,20 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <div className="flex h-screen w-64 flex-col border-r border-border/40 bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/30">
-      <div className="border-b border-border/40 p-6">
-        <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600">
-            <Sparkles className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">Clientbase</h1>
-            <p className="text-xs text-muted-foreground">Email campaigns</p>
+    <div className="flex h-screen w-64 flex-col border-r bg-card">
+      <div className="flex items-center justify-between border-b p-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Clientbase</h1>
+              <p className="text-xs text-muted-foreground">Email campaigns</p>
+            </div>
           </div>
         </div>
+        <ThemeToggle />
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
@@ -74,8 +78,8 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t border-border/40 p-4">
-        <div className="rounded-lg bg-gradient-to-br from-blue-600/10 to-violet-600/10 p-4">
+      <div className="border-t p-4">
+        <div className="rounded-lg border bg-gradient-to-br from-blue-600/10 to-violet-600/10 p-4">
           <div className="mb-2 flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-blue-600" />
             <p className="text-xs font-medium">AI-Powered</p>
