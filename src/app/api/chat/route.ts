@@ -7,15 +7,24 @@ export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
+  console.log("Chat API called");
+
   try {
-    const { message, includeClientData } = await request.json();
+    const body = await request.json();
+    console.log("Request body:", { hasMessage: !!body.message, includeClientData: body.includeClientData });
+
+    const { message, includeClientData } = body;
 
     if (!message) {
+      console.error("No message provided");
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
     // Check if API key is configured
-    if (!process.env.ANTHROPIC_API_KEY) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    console.log("API key status:", apiKey ? `Present (${apiKey.substring(0, 10)}...)` : "Missing");
+
+    if (!apiKey) {
       console.error("ANTHROPIC_API_KEY not configured");
       return NextResponse.json(
         { error: "AI service not configured. Please contact support." },
@@ -23,32 +32,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log("Initializing Anthropic client...");
     const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+      apiKey: apiKey,
     });
 
     let context = "";
+    console.log("Building context, includeClientData:", includeClientData);
 
     // Optionally include client data summary
     if (includeClientData) {
-      const clients = await db.client.findMany({
-        take: 50, // Limit to avoid token limits
-        include: {
-          tags: {
-            include: {
-              tag: true,
+      try {
+        console.log("Fetching client data...");
+        const clients = await db.client.findMany({
+          take: 50, // Limit to avoid token limits
+          include: {
+            tags: {
+              include: {
+                tag: true,
+              },
             },
           },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
 
-      const clientCount = await db.client.count();
-      const customFieldSample = clients[0]?.customFields || {};
+        const clientCount = await db.client.count();
+        console.log(`Found ${clientCount} clients, fetched ${clients.length}`);
+        const customFieldSample = clients[0]?.customFields || {};
 
-      context = `
+        context = `
 You have access to a client database with ${clientCount} clients. Here's a sample of the data:
 
 Recent clients (showing ${clients.length}):
@@ -62,7 +76,14 @@ ${i + 1}. ${c.email}
 
 Custom fields available: ${Object.keys(customFieldSample).join(", ")}
 `;
+      } catch (dbError) {
+        console.error("Database error:", dbError);
+        // Continue without client data if DB fails
+        context = "";
+      }
     }
+
+    console.log("Calling Anthropic API...");
 
     const response = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
@@ -83,8 +104,10 @@ If you need to search the web for information (like best practices, regulations,
       ],
     });
 
+    console.log("Got response from Anthropic");
     const text = response.content[0].type === "text" ? response.content[0].text : "";
 
+    console.log("Sending response to client");
     return NextResponse.json({
       response: text,
       clientDataIncluded: includeClientData,

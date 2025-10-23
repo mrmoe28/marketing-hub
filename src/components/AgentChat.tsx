@@ -26,7 +26,7 @@ export function AgentChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [includeClientData, setIncludeClientData] = useState(true);
+  const [includeClientData, setIncludeClientData] = useState(false); // Default to false for faster response
   const { toast } = useToast();
 
   async function handleSubmit(e: React.FormEvent) {
