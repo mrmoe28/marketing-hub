@@ -5,6 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 // Set longer timeout for AI responses
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function POST(request: NextRequest) {
   console.log("Chat API called");
