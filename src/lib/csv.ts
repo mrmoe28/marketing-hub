@@ -40,6 +40,64 @@ export interface ParsedCSVResult {
   customFields?: string[]; // List of fields not in standard schema
 }
 
+// Transform data values for specific fields
+function transformFieldValue(fieldName: string, value: unknown): unknown {
+  if (value === null || value === undefined || value === "") {
+    return value;
+  }
+
+  const normalizedFieldName = fieldName.toLowerCase().replace(/[_\s-]/g, "");
+  const strValue = String(value).trim();
+
+  // System size conversion: 7110 → "7.1 kW"
+  if (
+    normalizedFieldName.includes("systemsize") ||
+    normalizedFieldName.includes("size") ||
+    normalizedFieldName.includes("capacity") ||
+    normalizedFieldName === "systemsize" ||
+    normalizedFieldName === "size"
+  ) {
+    // Try to parse as number (handle watts)
+    const numValue = parseFloat(strValue.replace(/[^0-9.]/g, ""));
+    if (!isNaN(numValue) && numValue > 100) {
+      // Likely in watts, convert to kW
+      const kw = numValue / 1000;
+      return `${kw.toFixed(1)} kW`;
+    }
+    // If already small number, assume it's kW
+    if (!isNaN(numValue) && numValue <= 100) {
+      return `${numValue.toFixed(1)} kW`;
+    }
+  }
+
+  // Energy production formatting: Add kWh suffix if it's a number
+  if (
+    normalizedFieldName.includes("energyproduced") ||
+    normalizedFieldName.includes("production") ||
+    normalizedFieldName.includes("generated")
+  ) {
+    const numValue = parseFloat(strValue.replace(/[^0-9.]/g, ""));
+    if (!isNaN(numValue)) {
+      // If value > 1000, assume Wh and convert to kWh
+      if (numValue > 1000) {
+        return `${(numValue / 1000).toFixed(2)} kWh`;
+      }
+      // Already in kWh
+      return `${numValue.toFixed(2)} kWh`;
+    }
+  }
+
+  // Status normalization: Capitalize first letter
+  if (
+    normalizedFieldName.includes("status") ||
+    normalizedFieldName === "status"
+  ) {
+    return strValue.charAt(0).toUpperCase() + strValue.slice(1).toLowerCase();
+  }
+
+  return value;
+}
+
 export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
   return new Promise((resolve) => {
     Papa.parse(csvText, {
@@ -82,6 +140,9 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
           customerphone: "phone",
           telephone: "phone",
           mobile: "phone",
+          cellphone: "phone",
+          cell: "phone",
+          contactnumber: "phone",
 
           // Address variations
           address: "address1",
@@ -92,6 +153,8 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
           street: "address1",
           addressline2: "address2",
           address_line_2: "address2",
+          installationaddress: "address1",
+          siteaddress: "address1",
 
           // Postal code variations
           zip: "postalCode",
@@ -150,7 +213,15 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
           }
 
           try {
-            const parsed = ClientRowSchema.parse(row);
+            // Apply transformations to row data before validation
+            const rowObj = row as Record<string, unknown>;
+            const transformedRow: Record<string, unknown> = {};
+
+            Object.keys(rowObj).forEach((key) => {
+              transformedRow[key] = transformFieldValue(key, rowObj[key]);
+            });
+
+            const parsed = ClientRowSchema.parse(transformedRow);
 
             if (seen.has(parsed.email)) {
               errors.push({ row: index + 2, message: `Duplicate email: ${parsed.email}` });
@@ -158,7 +229,7 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
             }
 
             seen.add(parsed.email);
-            data.push(parsed);
+            data.push(parsed as ClientRow);
           } catch (error) {
             if (error instanceof z.ZodError) {
               errors.push({
