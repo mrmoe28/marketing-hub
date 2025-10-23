@@ -2,12 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import Anthropic from "@anthropic-ai/sdk";
 
+// Set longer timeout for AI responses
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
     const { message, includeClientData } = await request.json();
 
     if (!message) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
+    }
+
+    // Check if API key is configured
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error("ANTHROPIC_API_KEY not configured");
+      return NextResponse.json(
+        { error: "AI service not configured. Please contact support." },
+        { status: 500 }
+      );
     }
 
     const anthropic = new Anthropic({
@@ -77,9 +90,27 @@ If you need to search the web for information (like best practices, regulations,
       clientDataIncluded: includeClientData,
     });
   } catch (error) {
-    console.error("Chat error:", error);
+    console.error("Chat error details:", {
+      message: error instanceof Error ? error.message : "Unknown error",
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
+
+    // Provide user-friendly error messages
+    let errorMessage = "Failed to connect to AI service. Please try again.";
+
+    if (error instanceof Error) {
+      if (error.message.includes("API key")) {
+        errorMessage = "AI service authentication failed. Please contact support.";
+      } else if (error.message.includes("timeout") || error.message.includes("ECONNREFUSED")) {
+        errorMessage = "Connection timeout. Please check your internet and try again.";
+      } else if (error.message.includes("rate limit")) {
+        errorMessage = "Too many requests. Please wait a moment and try again.";
+      }
+    }
+
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Chat failed" },
+      { error: errorMessage },
       { status: 500 }
     );
   }
