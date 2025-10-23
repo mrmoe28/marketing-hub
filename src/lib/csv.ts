@@ -48,23 +48,63 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
       transformHeader: (header) => {
         const normalized = header.toLowerCase().trim().replace(/\s+/g, "");
         const mapping: Record<string, string> = {
+          // Email variations
+          owneremail: "email",
+          owner_email: "email",
+          customeremail: "email",
+          customer_email: "email",
+          clientemail: "email",
+          client_email: "email",
+          emailaddress: "email",
+          email_address: "email",
+          "e-mail": "email",
+
+          // Name variations
           firstname: "firstName",
           first_name: "firstName",
+          ownerfirstname: "firstName",
+          customerfirstname: "firstName",
+          owner: "firstName",  // If only "owner" exists, use as firstName
           lastname: "lastName",
           last_name: "lastName",
+          ownerlastname: "lastName",
+          customerlastname: "lastName",
+
+          // Company variations
           companyname: "company",
           company_name: "company",
+          organization: "company",
+
+          // Phone variations
           phonenumber: "phone",
           phone_number: "phone",
+          ownerphone: "phone",
+          customerphone: "phone",
+          telephone: "phone",
+          mobile: "phone",
+
+          // Address variations
           address: "address1",
           addressline1: "address1",
           address_line_1: "address1",
+          streetaddress: "address1",
+          street_address: "address1",
+          street: "address1",
           addressline2: "address2",
           address_line_2: "address2",
+
+          // Postal code variations
           zip: "postalCode",
           zipcode: "postalCode",
           postal_code: "postalCode",
           postalcode: "postalCode",
+          "zip/postalcode": "postalCode",
+
+          // State variations
+          "state/prov": "state",
+          province: "state",
+
+          // Tags
           tag: "tags",
         };
 
@@ -84,12 +124,14 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
           );
         }
 
-        // Check if CSV has email column
-        if (results.meta?.fields && !results.meta.fields.includes("email")) {
+        // Check if CSV has email column (after header transformation)
+        const hasEmailColumn = results.meta?.fields?.includes("email");
+
+        if (results.meta?.fields && !hasEmailColumn) {
           const availableFields = results.meta.fields.join(", ");
           errors.push({
             row: 0,
-            message: `CSV must have an "email" column. Found columns: ${availableFields}`,
+            message: `CSV must have an "email" column (or owneremail, customeremail, etc.). Found columns: ${availableFields}`,
           });
           resolve({ data: [], errors, customFields });
           return;
