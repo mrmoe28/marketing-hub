@@ -3,7 +3,6 @@ import { ClientTable } from "@/components/ClientTable";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Upload, Users, Sparkles } from "lucide-react";
-import { AgentChat } from "@/components/AgentChat";
 
 export const dynamic = "force-dynamic";
 
@@ -87,9 +86,6 @@ export default async function ClientsPage() {
           <ClientTable clients={clients} />
         </div>
       </div>
-
-      {/* AI Agent Chat */}
-      <AgentChat />
     </div>
   );
 }

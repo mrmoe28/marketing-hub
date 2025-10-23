@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/nav/Sidebar";
+import { AgentChat } from "@/components/AgentChat";
 
 export default function DashboardLayout({
   children,
@@ -11,6 +12,8 @@ export default function DashboardLayout({
       <main className="flex-1 overflow-y-auto">
         <div className="container mx-auto max-w-7xl p-8">{children}</div>
       </main>
+      {/* Global AI Agent Chat - appears on all dashboard pages */}
+      <AgentChat />
     </div>
   );
 }
