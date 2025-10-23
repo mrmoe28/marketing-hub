@@ -6,6 +6,7 @@ import { Users, Upload, Mail, Plus, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
+  { href: "/dashboard", label: "Dashboard", icon: Sparkles },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/import", label: "Import", icon: Upload },
   { href: "/campaigns", label: "Campaigns", icon: Mail },
