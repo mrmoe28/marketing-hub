@@ -1,6 +1,22 @@
 import Papa from "papaparse";
 import { z } from "zod";
 
+// Known/standard fields that map to Client model columns
+const KNOWN_FIELDS = [
+  "email",
+  "firstName",
+  "lastName",
+  "company",
+  "phone",
+  "address1",
+  "address2",
+  "city",
+  "state",
+  "postalCode",
+  "country",
+  "tags",
+];
+
 const ClientRowSchema = z.object({
   email: z.string().trim().min(1, "Email is required").email("Invalid email format"),
   firstName: z.string().optional(),
@@ -14,13 +30,14 @@ const ClientRowSchema = z.object({
   postalCode: z.string().optional(),
   country: z.string().optional(),
   tags: z.string().optional(),
-});
+}).passthrough(); // Allow extra fields to pass through
 
-export type ClientRow = z.infer<typeof ClientRowSchema>;
+export type ClientRow = z.infer<typeof ClientRowSchema> & Record<string, unknown>;
 
 export interface ParsedCSVResult {
   data: ClientRow[];
   errors: Array<{ row: number; message: string }>;
+  customFields?: string[]; // List of fields not in standard schema
 }
 
 export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
@@ -57,6 +74,15 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
         const data: ClientRow[] = [];
         const errors: Array<{ row: number; message: string }> = [];
         const seen = new Set<string>();
+        const customFields: string[] = [];
+
+        // Detect custom fields (fields not in known schema)
+        if (results.meta?.fields) {
+          const csvFields = results.meta.fields;
+          customFields.push(
+            ...csvFields.filter((field) => !KNOWN_FIELDS.includes(field))
+          );
+        }
 
         // Check if CSV has email column
         if (results.meta?.fields && !results.meta.fields.includes("email")) {
@@ -65,7 +91,7 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
             row: 0,
             message: `CSV must have an "email" column. Found columns: ${availableFields}`,
           });
-          resolve({ data: [], errors });
+          resolve({ data: [], errors, customFields });
           return;
         }
 
@@ -101,7 +127,7 @@ export async function parseCSV(csvText: string): Promise<ParsedCSVResult> {
           }
         });
 
-        resolve({ data, errors });
+        resolve({ data, errors, customFields: customFields.length > 0 ? customFields : undefined });
       },
       error: (error: Error) => {
         resolve({

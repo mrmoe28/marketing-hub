@@ -45,18 +45,20 @@ export function CSVImport() {
 
       setSuccess(true);
 
-      if (result.warnings) {
-        toast({
-          title: "Import completed with warnings",
-          description: `Created ${result.created}, updated ${result.updated} clients. ${result.warnings}`,
-          variant: "default",
-        });
-      } else {
-        toast({
-          title: "Import successful",
-          description: `Created ${result.created}, updated ${result.updated} clients`,
-        });
+      // Build description message
+      let description = `Created ${result.created}, updated ${result.updated} clients`;
+      if (result.customFieldsMessage) {
+        description += `. ${result.customFieldsMessage}`;
       }
+      if (result.warnings) {
+        description += `. ${result.warnings}`;
+      }
+
+      toast({
+        title: result.warnings ? "Import completed with warnings" : "Import successful",
+        description,
+        variant: "default",
+      });
 
       setFile(null);
 

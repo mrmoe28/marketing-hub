@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { parseCSV } from "@/lib/csv";
 import { storage } from "@/lib/storage";
+import { Prisma } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     // Convert File to text for server-side parsing
     const fileText = await file.text();
-    const { data, errors } = await parseCSV(fileText);
+    const { data, errors, customFields } = await parseCSV(fileText);
 
     // If no valid data and only errors, fail completely
     if (data.length === 0 && errors.length > 0) {
@@ -31,6 +32,11 @@ export async function POST(request: NextRequest) {
     let updated = 0;
     const tagCounts: Record<string, number> = {};
 
+    // Log custom fields detected
+    if (customFields && customFields.length > 0) {
+      console.log(`Detected ${customFields.length} custom fields:`, customFields);
+    }
+
     for (const row of data) {
       const tags = row.tags
         ? row.tags
@@ -41,6 +47,18 @@ export async function POST(request: NextRequest) {
 
       const existingClient = await db.client.findUnique({
         where: { email: row.email },
+      });
+
+      // Extract custom fields (fields not in standard schema)
+      const knownFields = [
+        "email", "firstName", "lastName", "company", "phone",
+        "address1", "address2", "city", "state", "postalCode", "country", "tags"
+      ];
+      const customFieldData: Record<string, unknown> = {};
+      Object.keys(row).forEach((key) => {
+        if (!knownFields.includes(key) && row[key] !== undefined && row[key] !== null) {
+          customFieldData[key] = row[key];
+        }
       });
 
       const clientData = {
@@ -55,6 +73,9 @@ export async function POST(request: NextRequest) {
         state: row.state || null,
         postalCode: row.postalCode || null,
         country: row.country || null,
+        customFields: Object.keys(customFieldData).length > 0
+          ? (customFieldData as Prisma.InputJsonValue)
+          : Prisma.JsonNull,
       };
 
       let client;
@@ -115,6 +136,10 @@ export async function POST(request: NextRequest) {
       tagCounts,
       errors: errors.length > 0 ? errors : undefined,
       warnings: errors.length > 0 ? `${errors.length} row(s) skipped due to errors` : undefined,
+      customFields: customFields && customFields.length > 0 ? customFields : undefined,
+      customFieldsMessage: customFields && customFields.length > 0
+        ? `Detected ${customFields.length} custom field(s): ${customFields.join(", ")}. These are stored in customFields.`
+        : undefined,
     });
   } catch (error) {
     console.error("Import error:", error);

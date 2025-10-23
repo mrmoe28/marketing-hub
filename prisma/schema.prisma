@@ -27,6 +27,7 @@ model Client {
   jobs           EmailJob[]
   events         Event[]
   subscriptions  Subscription[]
+  customFields   Json?            // Store any additional CSV columns as JSON
 }
 
 model Tag {
