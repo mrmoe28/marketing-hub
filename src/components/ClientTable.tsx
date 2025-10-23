@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import Link from "next/link";
 import { Users, Upload } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 
 type ClientWithTags = Client & {
   tags: (TagOnClient & { tag: Tag })[];
@@ -66,16 +66,83 @@ export function ClientTable({ clients }: ClientTableProps) {
     );
   }
 
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
+
+  // Click and drag to scroll functionality
+  useEffect(() => {
+    const container = tableContainerRef.current;
+    if (!container) return;
+
+    const handleMouseDown = (e: MouseEvent) => {
+      setIsDragging(true);
+      setStartX(e.pageX - container.offsetLeft);
+      setScrollLeft(container.scrollLeft);
+      container.style.cursor = 'grabbing';
+      container.style.userSelect = 'none';
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      if (container) {
+        container.style.cursor = 'grab';
+        container.style.userSelect = 'auto';
+      }
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const x = e.pageX - container.offsetLeft;
+      const walk = (x - startX) * 2; // Scroll speed multiplier
+      container.scrollLeft = scrollLeft - walk;
+    };
+
+    container.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      container.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [isDragging, startX, scrollLeft]);
+
   return (
     <div className="relative">
       {/* Scroll hint */}
       {customFieldNames.length > 0 && (
         <div className="mb-2 text-xs text-muted-foreground">
-          Scroll right to see all {5 + customFieldNames.length} columns →
+          Scroll right to see all {5 + customFieldNames.length} columns → (Click and drag to scroll)
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div
+        ref={tableContainerRef}
+        className="overflow-x-auto rounded-lg border cursor-grab"
+        style={{
+          scrollbarWidth: 'thin',
+          scrollbarColor: 'hsl(var(--primary) / 0.3) transparent',
+        }}
+      >
+        <style jsx>{`
+          div::-webkit-scrollbar {
+            height: 12px;
+          }
+          div::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          div::-webkit-scrollbar-thumb {
+            background: hsl(var(--primary) / 0.3);
+            border-radius: 6px;
+          }
+          div::-webkit-scrollbar-thumb:hover {
+            background: hsl(var(--primary) / 0.5);
+          }
+        `}</style>
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
