@@ -53,15 +53,28 @@ export async function POST(
       subject = subject.replace(new RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
     });
 
+    // Get sender email - use Resend's test domain if EMAIL_FROM not set
+    const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
+    const fromName = process.env.EMAIL_FROM_NAME || "Marketing Hub Test";
+
+    console.log(`Sending test email to ${email} from ${fromEmail}`);
+
     // Send email
-    await emailProvider.send({
-      to: email,
-      from: process.env.EMAIL_FROM || "noreply@yourdomain.com",
-      fromName: process.env.EMAIL_FROM_NAME || "Your Company",
-      subject: `[TEST] ${subject}`,
-      html: `<pre style="font-family: system-ui, -apple-system, sans-serif; white-space: pre-wrap; word-wrap: break-word;">${bodyText}</pre>`,
-      text: bodyText,
-    });
+    try {
+      await emailProvider.send({
+        to: email,
+        from: fromEmail,
+        fromName: fromName,
+        subject: `[TEST] ${subject}`,
+        html: `<pre style="font-family: system-ui, -apple-system, sans-serif; white-space: pre-wrap; word-wrap: break-word;">${bodyText}</pre>`,
+        text: bodyText,
+      });
+
+      console.log(`Test email sent successfully to ${email}`);
+    } catch (sendError) {
+      console.error("Email send error:", sendError);
+      throw new Error(`Email delivery failed: ${sendError instanceof Error ? sendError.message : "Unknown error"}. Check your Resend API key and domain verification.`);
+    }
 
     return NextResponse.json({
       success: true,

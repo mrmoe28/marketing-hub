@@ -282,13 +282,27 @@ export function TemplateEditForm({ template }: { template: Template }) {
   };
 
   const getPreviewText = () => {
-    return formData.bodyText
-      .replace(/\[First Name\]/g, "John")
-      .replace(/\[Last Name\]/g, "Doe")
-      .replace(/\[Company Name\]/g, "Acme Corp")
-      .replace(/\[Email\]/g, "john@acme.com")
-      .replace(/\[Phone\]/g, "(555) 123-4567")
-      .replace(/\[Address\]/g, "123 Main St");
+    const sampleData: Record<string, string> = {
+      "[First Name]": "John",
+      "[Last Name]": "Doe",
+      "[Company Name]": "Acme Corp",
+      "[Email]": "john@acme.com",
+      "[Phone]": "(555) 123-4567",
+      "[Address]": "123 Main St, City, ST 12345",
+      "[BOOKING_URL]": typeof window !== 'undefined' ? `${window.location.origin}/book` : "yourdomain.com/book",
+      "[UNSUBSCRIBE_LINK]": "yourdomain.com/unsubscribe",
+    };
+
+    let bodyText = formData.bodyText;
+    let subject = formData.subject;
+
+    Object.entries(sampleData).forEach(([tag, value]) => {
+      const regex = new RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+      bodyText = bodyText.replace(regex, value);
+      subject = subject.replace(regex, value);
+    });
+
+    return { body: bodyText, subject };
   };
 
   return (
@@ -354,24 +368,30 @@ export function TemplateEditForm({ template }: { template: Template }) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="bodyText">
-              Plain Text Body <span className="text-destructive">*</span>
+              Email Editor <span className="text-destructive">*</span>
             </Label>
             <div className="text-xs text-muted-foreground">
               {wordCount} words • {charCount} characters
             </div>
           </div>
-          <div className="flex gap-4">
-            <Textarea
-              ref={textareaRef}
-              id="bodyText"
-              name="bodyText"
-              value={formData.bodyText}
-              onChange={handleChange}
-              placeholder="Plain text version of the email"
-              rows={20}
-              className="flex-1 shadow-lg"
-              required
-            />
+          <div className="grid grid-cols-[1fr,auto,1fr] gap-4">
+            {/* Editor Column */}
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">Template (with merge tags)</div>
+              <Textarea
+                ref={textareaRef}
+                id="bodyText"
+                name="bodyText"
+                value={formData.bodyText}
+                onChange={handleChange}
+                placeholder="Plain text version of the email"
+                rows={20}
+                className="shadow-lg"
+                required
+              />
+            </div>
+
+            {/* Toolbar Column */}
             <div className="flex flex-col gap-2 w-48 shadow-lg p-4 rounded-lg border bg-card">
               <div className="text-sm font-semibold mb-2">Toolbar</div>
 
@@ -550,6 +570,28 @@ export function TemplateEditForm({ template }: { template: Template }) {
                 AI Assist
               </Button>
             </div>
+
+            {/* Live Preview Column */}
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">Live Preview (what recipients see)</div>
+              <div className="shadow-lg rounded-lg border bg-card p-6 min-h-[400px] max-h-[500px] overflow-y-auto">
+                <div className="space-y-4">
+                  <div className="border-b pb-3">
+                    <div className="text-xs text-muted-foreground mb-1">Subject:</div>
+                    <div className="font-semibold">{getPreviewText().subject}</div>
+                  </div>
+                  <div
+                    className="whitespace-pre-wrap text-sm leading-relaxed"
+                    dangerouslySetInnerHTML={{
+                      __html: getPreviewText().body.replace(
+                        /(https?:\/\/[^\s]+|www\.[^\s]+)/g,
+                        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline dark:text-blue-400">$1</a>'
+                      )
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -590,10 +632,10 @@ export function TemplateEditForm({ template }: { template: Template }) {
           <div className="space-y-4">
             <div>
               <Label className="text-xs text-muted-foreground">Subject:</Label>
-              <p className="font-semibold">{formData.subject}</p>
+              <p className="font-semibold">{getPreviewText().subject}</p>
             </div>
             <div className="border rounded-lg p-6 bg-background">
-              <div className="whitespace-pre-wrap">{getPreviewText()}</div>
+              <div className="whitespace-pre-wrap">{getPreviewText().body}</div>
             </div>
           </div>
         </DialogContent>
