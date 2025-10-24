@@ -229,3 +229,26 @@ enum BookingStatus {
   COMPLETED
   NO_SHOW
 }
+
+model AgentActivity {
+  id              String         @id @default(cuid())
+  conversationId  String?        // Link to conversation
+  toolName        String         // Name of tool executed
+  toolInput       Json           // Parameters passed to the tool
+  toolOutput      Json?          // Result returned by the tool
+  status          ActivityStatus @default(PENDING)
+  error           String?        @db.Text
+  duration        Int?           // Execution time in milliseconds
+  createdAt       DateTime       @default(now())
+
+  @@index([conversationId])
+  @@index([toolName])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum ActivityStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}

@@ -383,7 +383,7 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
           // Try new agent tools first
           const newToolNames = agentTools.map(t => t.name);
           if (newToolNames.includes(functionName)) {
-            functionResponse = await executeAgentTool(functionName, functionArgs);
+            functionResponse = await executeAgentTool(functionName, functionArgs, conversationId);
           } else {
             // Fall back to legacy tools
             switch (functionName) {

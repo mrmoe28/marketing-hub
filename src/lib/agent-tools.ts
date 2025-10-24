@@ -9,6 +9,40 @@ import { createJobsForAudience } from "@/lib/tracking";
  */
 
 // ============================================================================
+// ACTIVITY LOGGING
+// ============================================================================
+
+/**
+ * Log an activity performed by the AI agent
+ */
+async function logActivity(params: {
+  conversationId?: string;
+  toolName: string;
+  toolInput: any;
+  toolOutput?: any;
+  status: "PENDING" | "SUCCESS" | "FAILED";
+  error?: string;
+  duration?: number;
+}) {
+  try {
+    await db.agentActivity.create({
+      data: {
+        conversationId: params.conversationId || null,
+        toolName: params.toolName,
+        toolInput: params.toolInput,
+        toolOutput: params.toolOutput || null,
+        status: params.status,
+        error: params.error || null,
+        duration: params.duration || null,
+      },
+    });
+  } catch (error) {
+    // Don't let logging errors break the tool execution
+    console.error("Failed to log activity:", error);
+  }
+}
+
+// ============================================================================
 // CAMPAIGN MANAGEMENT TOOLS
 // ============================================================================
 
@@ -825,48 +859,103 @@ export const agentTools = [
   },
 ];
 
-// Tool execution router
-export async function executeAgentTool(toolName: string, toolInput: any) {
-  switch (toolName) {
-    case "createCampaign":
-      return await createCampaign(toolInput);
-    case "sendCampaign":
-      return await sendCampaign(toolInput.campaignId);
-    case "getCampaignStats":
-      return await getCampaignStats(toolInput.campaignId);
-    case "createEmailTemplate":
-      return await createEmailTemplate(toolInput);
-    case "updateEmailTemplate":
-      return await updateEmailTemplate(toolInput.templateId, toolInput);
-    case "sendTestEmail":
-      return await sendTestEmail(toolInput);
-    case "listTemplates":
-      return await listTemplates(toolInput.category);
-    case "searchClients":
-      return await searchClients(toolInput);
-    case "addClient":
-      return await addClient(toolInput);
-    case "tagClients":
-      return await tagClients(toolInput.clientIds, toolInput.tagNames);
-    case "getClientStats":
-      return await getClientStats();
-    case "createBooking":
-      return await createBooking({
-        ...toolInput,
-        scheduledDate: new Date(toolInput.scheduledDate),
-      });
-    case "updateBookingStatus":
-      return await updateBookingStatus(toolInput.bookingId, toolInput.status);
-    case "listBookings":
-      return await listBookings({
-        ...toolInput,
-        startDate: toolInput.startDate ? new Date(toolInput.startDate) : undefined,
-        endDate: toolInput.endDate ? new Date(toolInput.endDate) : undefined,
-      });
-    default:
-      return {
-        success: false,
-        error: `Unknown tool: ${toolName}`,
-      };
+// Tool execution router with activity logging
+export async function executeAgentTool(
+  toolName: string,
+  toolInput: any,
+  conversationId?: string
+) {
+  const startTime = Date.now();
+  let result: any;
+  let status: "SUCCESS" | "FAILED" = "SUCCESS";
+  let error: string | undefined;
+
+  try {
+    switch (toolName) {
+      case "createCampaign":
+        result = await createCampaign(toolInput);
+        break;
+      case "sendCampaign":
+        result = await sendCampaign(toolInput.campaignId);
+        break;
+      case "getCampaignStats":
+        result = await getCampaignStats(toolInput.campaignId);
+        break;
+      case "createEmailTemplate":
+        result = await createEmailTemplate(toolInput);
+        break;
+      case "updateEmailTemplate":
+        result = await updateEmailTemplate(toolInput.templateId, toolInput);
+        break;
+      case "sendTestEmail":
+        result = await sendTestEmail(toolInput);
+        break;
+      case "listTemplates":
+        result = await listTemplates(toolInput.category);
+        break;
+      case "searchClients":
+        result = await searchClients(toolInput);
+        break;
+      case "addClient":
+        result = await addClient(toolInput);
+        break;
+      case "tagClients":
+        result = await tagClients(toolInput.clientIds, toolInput.tagNames);
+        break;
+      case "getClientStats":
+        result = await getClientStats();
+        break;
+      case "createBooking":
+        result = await createBooking({
+          ...toolInput,
+          scheduledDate: new Date(toolInput.scheduledDate),
+        });
+        break;
+      case "updateBookingStatus":
+        result = await updateBookingStatus(toolInput.bookingId, toolInput.status);
+        break;
+      case "listBookings":
+        result = await listBookings({
+          ...toolInput,
+          startDate: toolInput.startDate ? new Date(toolInput.startDate) : undefined,
+          endDate: toolInput.endDate ? new Date(toolInput.endDate) : undefined,
+        });
+        break;
+      default:
+        result = {
+          success: false,
+          error: `Unknown tool: ${toolName}`,
+        };
+        status = "FAILED";
+        error = `Unknown tool: ${toolName}`;
+    }
+
+    // Check if result indicates failure
+    if (result && result.success === false) {
+      status = "FAILED";
+      error = result.error || "Tool execution failed";
+    }
+  } catch (err) {
+    status = "FAILED";
+    error = err instanceof Error ? err.message : String(err);
+    result = {
+      success: false,
+      error,
+    };
   }
+
+  const duration = Date.now() - startTime;
+
+  // Log the activity
+  await logActivity({
+    conversationId,
+    toolName,
+    toolInput,
+    toolOutput: result,
+    status,
+    error,
+    duration,
+  });
+
+  return result;
 }
