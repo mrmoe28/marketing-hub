@@ -76,9 +76,16 @@ const CTA_TEMPLATES = [
   "Sign Up Free →",
 ];
 
-const BOOKING_LINK_TEXT = `Schedule your appointment here: [BOOKING_URL]
+// Get booking URL - will be replaced with actual URL when sending
+const getBookingLinkText = () => {
+  const bookingUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/book`
+    : '[BOOKING_URL]';
+
+  return `Schedule your appointment here: ${bookingUrl}
 
 Click the link above to view available times and book your appointment.`;
+};
 
 export function TemplateEditForm({ template }: { template: Template }) {
   const router = useRouter();
@@ -462,7 +469,7 @@ export function TemplateEditForm({ template }: { template: Template }) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => insertAtCursor(`\n\n${BOOKING_LINK_TEXT}\n\n`)}
+                onClick={() => insertAtCursor(`\n\n${getBookingLinkText()}\n\n`)}
                 className="w-full justify-start text-xs"
               >
                 <Calendar className="mr-2 h-3 w-3" />
