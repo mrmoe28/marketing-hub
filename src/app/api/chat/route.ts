@@ -86,6 +86,18 @@ const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
         required: ["templateId"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_booking_page_url",
+      description: "Get the public booking page URL where customers can schedule appointments. Use this when users ask about booking, scheduling, or appointments.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: []
+      }
+    }
   }
 ];
 
@@ -138,6 +150,18 @@ async function getTemplate(args: any) {
   return template;
 }
 
+async function getBookingPageUrl() {
+  // Get the base URL from environment or use default
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'http://localhost:3000';
+
+  return {
+    url: `${baseUrl}/book`,
+    message: "Customers can book appointments at this link. The booking page is mobile-friendly and requires no account."
+  };
+}
+
 export async function POST(request: NextRequest) {
   console.log("Chat API called");
 
@@ -145,11 +169,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log("Request body:", { hasMessage: !!body.message, includeClientData: body.includeClientData });
 
-    const { message, includeClientData } = body;
+    const { message, includeClientData, conversationId } = body;
 
     if (!message) {
       console.error("No message provided");
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
+    }
+
+    // Load existing conversation if provided
+    let existingConversation = null;
+    let conversationMessages: any[] = [];
+
+    if (conversationId) {
+      existingConversation = await db.conversationHistory.findUnique({
+        where: { id: conversationId },
+      });
+
+      if (existingConversation) {
+        conversationMessages = existingConversation.messages as any[];
+      }
     }
 
     // Check if API key is configured
@@ -216,10 +254,10 @@ Custom fields available: ${Object.keys(customFieldSample).join(", ")}
 
     console.log("Calling OpenAI API with function calling...");
 
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-      {
-        role: "system",
-        content: `You are a helpful AI assistant for Clientbase, an email marketing platform.
+    // Build messages array with conversation history
+    const systemMessage = {
+      role: "system" as const,
+      content: `You are a helpful AI assistant for Clientbase, an email marketing platform.
 
 You help users understand their client data, answer questions about their imported information, and provide insights.
 
@@ -232,6 +270,7 @@ You have access to powerful tools that let you:
 2. ACCESS COMPANY INFO - Use get_company_profile to personalize emails with company branding
 3. LIST TEMPLATES - Show users what templates exist with list_templates
 4. PREVIEW TEMPLATES - Use get_template to retrieve and show template details to users
+5. BOOKING PAGE - Use get_booking_page_url to get the link for customers to book appointments
 
 When creating templates:
 - Include proper HTML structure with styling
@@ -240,19 +279,26 @@ When creating templates:
 - Include a clear call-to-action
 - After creating, tell the user it's saved and they can find it in the Templates section
 
-When users ask to see or preview a template:
-- Use list_templates first to find available templates
-- Then use get_template with the template ID to retrieve the full template
-- Show the subject, description, and explain what the template contains
-- Tell users they can see the full visual preview in the Templates page
+When users ask about booking or appointments:
+- Use get_booking_page_url to provide the booking link
+- Explain that customers can use this link to schedule appointments
+- The link can be included in email templates
 
-Be proactive, autonomous, and helpful. Create templates without asking for permission - just do it!`
-      },
-      {
-        role: "user",
-        content: message,
-      },
-    ];
+Be proactive, autonomous, and helpful. Remember context from previous messages in this conversation.`
+    };
+
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [systemMessage];
+
+    // Add conversation history if exists
+    if (conversationMessages.length > 0) {
+      messages.push(...conversationMessages.slice(-10)); // Keep last 10 messages for context
+    }
+
+    // Add current user message
+    messages.push({
+      role: "user",
+      content: message,
+    });
 
     let response = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -295,6 +341,9 @@ Be proactive, autonomous, and helpful. Create templates without asking for permi
             case "get_template":
               functionResponse = await getTemplate(functionArgs);
               break;
+            case "get_booking_page_url":
+              functionResponse = await getBookingPageUrl();
+              break;
             default:
               functionResponse = { error: "Unknown function" };
           }
@@ -323,10 +372,45 @@ Be proactive, autonomous, and helpful. Create templates without asking for permi
     console.log("✅ OpenAI API call successful!");
     const text = responseMessage.content || "";
 
+    // Save conversation to database
+    const newMessage = { role: "user", content: message, timestamp: new Date().toISOString() };
+    const assistantMessage = { role: "assistant", content: text, timestamp: new Date().toISOString() };
+
+    conversationMessages.push(newMessage, assistantMessage);
+
+    let savedConversationId = conversationId;
+
+    try {
+      if (existingConversation) {
+        // Update existing conversation
+        await db.conversationHistory.update({
+          where: { id: conversationId },
+          data: {
+            messages: conversationMessages,
+            topics: [], // Could extract topics from conversation in the future
+          },
+        });
+      } else {
+        // Create new conversation
+        const newConversation = await db.conversationHistory.create({
+          data: {
+            messages: conversationMessages,
+            summary: null,
+            topics: [],
+          },
+        });
+        savedConversationId = newConversation.id;
+      }
+    } catch (saveError) {
+      console.error("Error saving conversation:", saveError);
+      // Continue even if save fails
+    }
+
     console.log("Sending response to client");
     return NextResponse.json({
       response: text,
       clientDataIncluded: includeClientData,
+      conversationId: savedConversationId,
     });
   } catch (error) {
     console.error("=== CHAT API ERROR ===");

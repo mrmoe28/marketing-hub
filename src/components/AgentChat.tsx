@@ -11,14 +11,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Send, Loader2 } from "lucide-react";
+import { Sparkles, Send, Loader2, History } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { ChatHistory } from "@/components/ChatHistory";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  timestamp?: string;
 }
 
 export function AgentChat() {
@@ -26,7 +28,9 @@ export function AgentChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [includeClientData, setIncludeClientData] = useState(true); // Default to true for better answers
+  const [includeClientData, setIncludeClientData] = useState(true);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -34,6 +38,36 @@ export function AgentChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  const loadConversation = async (id: string | null) => {
+    if (!id) {
+      startNewConversation();
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/conversations/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(data.messages || []);
+        setConversationId(id);
+        setShowHistory(false);
+      }
+    } catch (error) {
+      console.error("Error loading conversation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load conversation",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const startNewConversation = () => {
+    setMessages([]);
+    setConversationId(null);
+    setShowHistory(false);
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,6 +85,7 @@ export function AgentChat() {
         body: JSON.stringify({
           message: userMessage,
           includeClientData,
+          conversationId,
         }),
       });
 
@@ -64,6 +99,11 @@ export function AgentChat() {
         ...prev,
         { role: "assistant", content: data.response },
       ]);
+
+      // Update conversation ID if this was a new conversation
+      if (data.conversationId && !conversationId) {
+        setConversationId(data.conversationId);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -85,30 +125,52 @@ export function AgentChat() {
           <Sparkles className="h-6 w-6" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] flex flex-col">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <DialogTitle>AI Agent</DialogTitle>
-              <DialogDescription>
-                Ask questions about your clients and data
-              </DialogDescription>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 pt-2">
-            <Switch
-              id="include-data"
-              checked={includeClientData}
-              onCheckedChange={setIncludeClientData}
+      <DialogContent className="sm:max-w-[900px] max-h-[80vh] flex">
+        {/* Chat History Sidebar */}
+        {showHistory && (
+          <div className="w-64 border-r flex-shrink-0 overflow-hidden">
+            <ChatHistory
+              currentConversationId={conversationId}
+              onSelectConversation={loadConversation}
+              onNewConversation={startNewConversation}
             />
-            <Label htmlFor="include-data" className="text-xs text-muted-foreground cursor-pointer">
-              Include my client data in context
-            </Label>
           </div>
-        </DialogHeader>
+        )}
+
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <DialogHeader>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-violet-600">
+                  <Sparkles className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <DialogTitle>AI Agent</DialogTitle>
+                  <DialogDescription>
+                    Ask questions about your clients and data
+                  </DialogDescription>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowHistory(!showHistory)}
+              >
+                <History className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <Switch
+                id="include-data"
+                checked={includeClientData}
+                onCheckedChange={setIncludeClientData}
+              />
+              <Label htmlFor="include-data" className="text-xs text-muted-foreground cursor-pointer">
+                Include my client data in context
+              </Label>
+            </div>
+          </DialogHeader>
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto space-y-4 py-4 min-h-[300px]">
@@ -188,23 +250,24 @@ export function AgentChat() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
-        <form onSubmit={handleSubmit} className="flex gap-2 pt-4 border-t">
-          <Input
-            placeholder="Ask me anything..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            disabled={loading}
-            className="flex-1"
-          />
-          <Button type="submit" size="icon" disabled={loading || !input.trim()}>
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </form>
+          {/* Input */}
+          <form onSubmit={handleSubmit} className="flex gap-2 pt-4 border-t">
+            <Input
+              placeholder="Ask me anything..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={loading}
+              className="flex-1"
+            />
+            <Button type="submit" size="icon" disabled={loading || !input.trim()}>
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );

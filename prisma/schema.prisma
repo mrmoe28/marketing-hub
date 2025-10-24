@@ -27,6 +27,7 @@ model Client {
   jobs           EmailJob[]
   events         Event[]
   subscriptions  Subscription[]
+  bookings       Booking[]
   customFields   Json?            // Store any additional CSV columns as JSON
 }
 
@@ -191,4 +192,40 @@ model EmailTemplate {
   isAiCreated Boolean  @default(false) // True if created by AI agent
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model Booking {
+  id                String        @id @default(cuid())
+  clientId          String?
+  clientName        String        // Full name of person booking
+  clientEmail       String        // Email for confirmation
+  clientPhone       String?       // Optional phone number
+  serviceType       String        // Type of appointment (e.g., "Solar System Troubleshooting")
+  scheduledDate     DateTime      // Date and time of appointment
+  duration          Int           @default(60) // Duration in minutes
+  timezone          String        @default("America/New_York") // Client's timezone
+  status            BookingStatus @default(PENDING)
+  notes             String?       @db.Text // Client notes or special requests
+  internalNotes     String?       @db.Text // Staff notes
+  googleEventId     String?       // Google Calendar event ID for sync
+  reminderSent      Boolean       @default(false)
+  confirmedAt       DateTime?
+  cancelledAt       DateTime?
+  cancellationReason String?      @db.Text
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([clientEmail])
+  @@index([scheduledDate])
+  @@index([status])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
 }
