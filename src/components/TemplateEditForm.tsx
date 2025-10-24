@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import type { Editor } from "@tiptap/react";
 import {
   Loader2,
   Save,
@@ -25,6 +27,8 @@ import {
   Type,
   Heading,
   Calendar,
+  Undo,
+  Redo,
 } from "lucide-react";
 import {
   Dialog,
@@ -89,7 +93,7 @@ Click the link above to view available times and book your appointment.`;
 
 export function TemplateEditForm({ template }: { template: Template }) {
   const router = useRouter();
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [editor, setEditor] = useState<Editor | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showTestEmail, setShowTestEmail] = useState(false);
@@ -106,8 +110,8 @@ export function TemplateEditForm({ template }: { template: Template }) {
     description: template.description || "",
   });
 
-  const charCount = formData.bodyText.length;
-  const wordCount = formData.bodyText.trim().split(/\s+/).filter(Boolean).length;
+  const charCount = formData.bodyHtml.replace(/<[^>]*>/g, '').length;
+  const wordCount = formData.bodyHtml.replace(/<[^>]*>/g, '').trim().split(/\s+/).filter(Boolean).length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,55 +147,19 @@ export function TemplateEditForm({ template }: { template: Template }) {
     }));
   };
 
-  const insertAtCursor = (textToInsert: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = formData.bodyText;
-    const before = text.substring(0, start);
-    const after = text.substring(end);
-
-    setFormData((prev) => ({
-      ...prev,
-      bodyText: before + textToInsert + after,
-    }));
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(
-        start + textToInsert.length,
-        start + textToInsert.length
-      );
-    }, 0);
+  // Helper functions for rich text editor
+  const insertText = (text: string) => {
+    if (!editor) return;
+    editor.chain().focus().insertContent(text).run();
   };
 
-  const wrapSelection = (before: string, after: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = formData.bodyText;
-    const selectedText = text.substring(start, end);
-    const beforeText = text.substring(0, start);
-    const afterText = text.substring(end);
-
-    const newText = beforeText + before + selectedText + after + afterText;
-
-    setFormData((prev) => ({
-      ...prev,
-      bodyText: newText,
-    }));
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(
-        start + before.length,
-        end + before.length
-      );
-    }, 0);
+  const insertLink = (url: string, text?: string) => {
+    if (!editor) return;
+    if (text) {
+      editor.chain().focus().insertContent(`<a href="${url}">${text}</a>`).run();
+    } else {
+      editor.chain().focus().setLink({ href: url }).run();
+    }
   };
 
   const handleImageUpload = () => {
@@ -203,7 +171,7 @@ export function TemplateEditForm({ template }: { template: Template }) {
       if (!file) return;
 
       const imageUrl = `[Image: ${file.name}]`;
-      insertAtCursor(imageUrl);
+      insertText(imageUrl);
     };
     input.click();
   };
@@ -213,9 +181,7 @@ export function TemplateEditForm({ template }: { template: Template }) {
     if (!url) return;
 
     const text = prompt("Enter link text (optional):");
-    const linkText = text || url;
-
-    insertAtCursor(`${linkText}: ${url}`);
+    insertLink(url, text || undefined);
   };
 
   const handleSendTest = async () => {
@@ -259,17 +225,25 @@ export function TemplateEditForm({ template }: { template: Template }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt: aiPrompt,
-          context: formData.bodyText,
+          context: formData.bodyHtml,
         }),
       });
 
       if (!response.ok) throw new Error("AI request failed");
 
       const data = await response.json();
+      const htmlResult = data.result || formData.bodyHtml;
+
       setFormData((prev) => ({
         ...prev,
-        bodyText: data.result || prev.bodyText,
+        bodyHtml: htmlResult,
+        bodyText: htmlResult.replace(/<[^>]*>/g, ''),
       }));
+
+      // Update editor content
+      if (editor) {
+        editor.commands.setContent(htmlResult);
+      }
 
       setShowAI(false);
       setAiPrompt("");
@@ -293,16 +267,16 @@ export function TemplateEditForm({ template }: { template: Template }) {
       "[UNSUBSCRIBE_LINK]": "yourdomain.com/unsubscribe",
     };
 
-    let bodyText = formData.bodyText;
+    let bodyHtml = formData.bodyHtml;
     let subject = formData.subject;
 
     Object.entries(sampleData).forEach(([tag, value]) => {
       const regex = new RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-      bodyText = bodyText.replace(regex, value);
+      bodyHtml = bodyHtml.replace(regex, value);
       subject = subject.replace(regex, value);
     });
 
-    return { body: bodyText, subject };
+    return { body: bodyHtml, subject };
   };
 
   return (
@@ -378,16 +352,11 @@ export function TemplateEditForm({ template }: { template: Template }) {
             {/* Editor Column */}
             <div className="space-y-2">
               <div className="text-xs font-medium text-muted-foreground">Template (with merge tags)</div>
-              <Textarea
-                ref={textareaRef}
-                id="bodyText"
-                name="bodyText"
-                value={formData.bodyText}
-                onChange={handleChange}
-                placeholder="Plain text version of the email"
-                rows={20}
-                className="shadow-lg"
-                required
+              <RichTextEditor
+                content={formData.bodyHtml}
+                onChange={(html) => setFormData(prev => ({ ...prev, bodyHtml: html, bodyText: html.replace(/<[^>]*>/g, '') }))}
+                onReady={(editorInstance) => setEditor(editorInstance)}
+                placeholder="Start typing your email..."
               />
             </div>
 
@@ -396,7 +365,7 @@ export function TemplateEditForm({ template }: { template: Template }) {
               <div className="text-sm font-semibold mb-2">Toolbar</div>
 
               {/* Variables */}
-              <Select onValueChange={(value) => insertAtCursor(value)}>
+              <Select onValueChange={(value) => insertText(value)}>
                 <SelectTrigger className="w-full h-9 text-xs">
                   <Tag className="mr-2 h-3 w-3" />
                   <SelectValue placeholder="Variables" />
@@ -428,9 +397,10 @@ export function TemplateEditForm({ template }: { template: Template }) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => wrapSelection("**", "**")}
+                  onClick={() => editor?.chain().focus().toggleBold().run()}
                   className="text-xs"
                   title="Bold"
+                  disabled={!editor}
                 >
                   <Bold className="h-3 w-3" />
                 </Button>
@@ -438,9 +408,10 @@ export function TemplateEditForm({ template }: { template: Template }) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => wrapSelection("*", "*")}
+                  onClick={() => editor?.chain().focus().toggleItalic().run()}
                   className="text-xs"
                   title="Italic"
+                  disabled={!editor}
                 >
                   <Italic className="h-3 w-3" />
                 </Button>
@@ -448,9 +419,10 @@ export function TemplateEditForm({ template }: { template: Template }) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => insertAtCursor("\n• ")}
+                  onClick={() => editor?.chain().focus().toggleBulletList().run()}
                   className="text-xs"
                   title="Bullet List"
+                  disabled={!editor}
                 >
                   <List className="h-3 w-3" />
                 </Button>
@@ -458,16 +430,43 @@ export function TemplateEditForm({ template }: { template: Template }) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => insertAtCursor("\n## ")}
+                  onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
                   className="text-xs"
                   title="Heading"
+                  disabled={!editor}
                 >
                   <Heading className="h-3 w-3" />
                 </Button>
               </div>
 
+              {/* Undo/Redo */}
+              <div className="grid grid-cols-2 gap-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => editor?.chain().focus().undo().run()}
+                  className="text-xs"
+                  title="Undo"
+                  disabled={!editor || !editor.can().undo()}
+                >
+                  <Undo className="h-3 w-3" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => editor?.chain().focus().redo().run()}
+                  className="text-xs"
+                  title="Redo"
+                  disabled={!editor || !editor.can().redo()}
+                >
+                  <Redo className="h-3 w-3" />
+                </Button>
+              </div>
+
               {/* Emojis */}
-              <Select onValueChange={(value) => insertAtCursor(value)}>
+              <Select onValueChange={(value) => insertText(value)}>
                 <SelectTrigger className="w-full h-9 text-xs">
                   <Smile className="mr-2 h-3 w-3" />
                   <SelectValue placeholder="Emojis" />
@@ -484,7 +483,7 @@ export function TemplateEditForm({ template }: { template: Template }) {
               </Select>
 
               {/* CTA */}
-              <Select onValueChange={(value) => insertAtCursor(`\n\n${value}\n\n`)}>
+              <Select onValueChange={(value) => insertText(`<br><br>${value}<br><br>`)}>
                 <SelectTrigger className="w-full h-9 text-xs">
                   <MousePointer className="mr-2 h-3 w-3" />
                   <SelectValue placeholder="CTA" />
@@ -503,7 +502,7 @@ export function TemplateEditForm({ template }: { template: Template }) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => insertAtCursor(`\n\n${getBookingLinkText()}\n\n`)}
+                onClick={() => insertText(`<br><br>${getBookingLinkText()}<br><br>`)}
                 className="w-full justify-start text-xs"
               >
                 <Calendar className="mr-2 h-3 w-3" />
@@ -515,7 +514,7 @@ export function TemplateEditForm({ template }: { template: Template }) {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => insertAtCursor("\n\nUnsubscribe: [UNSUBSCRIBE_LINK]")}
+                onClick={() => insertText("<br><br>Unsubscribe: [UNSUBSCRIBE_LINK]")}
                 className="w-full justify-start text-xs"
               >
                 <LinkIcon className="mr-2 h-3 w-3" />
@@ -581,12 +580,9 @@ export function TemplateEditForm({ template }: { template: Template }) {
                     <div className="font-semibold">{getPreviewText().subject}</div>
                   </div>
                   <div
-                    className="whitespace-pre-wrap text-sm leading-relaxed"
+                    className="prose prose-sm max-w-none"
                     dangerouslySetInnerHTML={{
-                      __html: getPreviewText().body.replace(
-                        /(https?:\/\/[^\s]+|www\.[^\s]+)/g,
-                        '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline dark:text-blue-400">$1</a>'
-                      )
+                      __html: getPreviewText().body
                     }}
                   />
                 </div>
@@ -635,7 +631,10 @@ export function TemplateEditForm({ template }: { template: Template }) {
               <p className="font-semibold">{getPreviewText().subject}</p>
             </div>
             <div className="border rounded-lg p-6 bg-background">
-              <div className="whitespace-pre-wrap">{getPreviewText().body}</div>
+              <div
+                className="prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: getPreviewText().body }}
+              />
             </div>
           </div>
         </DialogContent>
