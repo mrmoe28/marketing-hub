@@ -279,8 +279,8 @@ export function TemplateEditForm({ template }: { template: Template }) {
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-2">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">
               Template Name <span className="text-destructive">*</span>
@@ -346,9 +346,9 @@ export function TemplateEditForm({ template }: { template: Template }) {
               {wordCount} words • {charCount} characters
             </div>
           </div>
-          <div className="grid grid-cols-[1fr,auto,1fr] gap-4">
+          <div className="grid grid-cols-[1fr,auto,1fr] gap-3">
             {/* Editor Column */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="text-xs font-medium text-muted-foreground">Template (with merge tags)</div>
               <RichTextEditor
                 content={formData.bodyHtml}
@@ -359,8 +359,8 @@ export function TemplateEditForm({ template }: { template: Template }) {
             </div>
 
             {/* Toolbar Column */}
-            <div className="flex flex-col gap-2 w-48 shadow-lg p-4 rounded-lg border bg-card">
-              <div className="text-sm font-semibold mb-2">Toolbar</div>
+            <div className="flex flex-col gap-1.5 w-44 shadow-lg p-3 rounded-lg border bg-card">
+              <div className="text-sm font-semibold mb-1">Toolbar</div>
 
               {/* Variables */}
               <Select onValueChange={(value) => insertText(value)}>
@@ -569,13 +569,13 @@ export function TemplateEditForm({ template }: { template: Template }) {
             </div>
 
             {/* Live Preview Column */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="text-xs font-medium text-muted-foreground">Live Preview (what recipients see)</div>
-              <div className="shadow-lg rounded-lg border bg-card p-6 min-h-[400px] max-h-[500px] overflow-y-auto">
-                <div className="space-y-4">
-                  <div className="border-b pb-3">
+              <div className="shadow-lg rounded-lg border bg-card p-4 min-h-[400px] max-h-[500px] overflow-y-auto">
+                <div className="space-y-3">
+                  <div className="border-b pb-2">
                     <div className="text-xs text-muted-foreground mb-1">Subject:</div>
-                    <div className="font-semibold">{getPreviewText().subject}</div>
+                    <div className="font-semibold text-sm">{getPreviewText().subject}</div>
                   </div>
                   <div
                     className="prose prose-sm max-w-none"

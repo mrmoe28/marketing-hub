@@ -41,7 +41,7 @@ export default async function TemplateEditPage({ params }: PageProps) {
       </div>
 
       <div className="rounded-lg border bg-card shadow-sm">
-        <div className="p-6">
+        <div className="p-4">
           <TemplateEditForm template={template} />
         </div>
       </div>
