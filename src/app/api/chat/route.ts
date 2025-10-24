@@ -1,14 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import OpenAI from "openai";
+import { agentTools, executeAgentTool } from "@/lib/agent-tools";
 
 // Set longer timeout for AI responses
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// Define available tools for the AI agent
-const tools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
+// Convert agent tools to OpenAI format
+const convertToolsToOpenAIFormat = (): OpenAI.Chat.Completions.ChatCompletionTool[] => {
+  return agentTools.map((tool) => ({
+    type: "function" as const,
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.input_schema,
+    },
+  }));
+};
+
+// Legacy tools for backwards compatibility
+const legacyTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
   {
     type: "function",
     function: {
@@ -162,6 +175,11 @@ async function getBookingPageUrl() {
   };
 }
 
+// Combine all available tools
+const getAllTools = () => {
+  return [...legacyTools, ...convertToolsToOpenAIFormat()];
+};
+
 export async function POST(request: NextRequest) {
   console.log("Chat API called");
 
@@ -257,34 +275,68 @@ Custom fields available: ${Object.keys(customFieldSample).join(", ")}
     // Build messages array with conversation history
     const systemMessage = {
       role: "system" as const,
-      content: `You are a helpful AI assistant for Clientbase, an email marketing platform.
+      content: `You are an autonomous AI assistant for a Marketing Hub CRM and email marketing platform.
 
-You help users understand their client data, answer questions about their imported information, and provide insights.
+You have FULL CONTROL to perform actions on behalf of the user. Be proactive and helpful.
 
 ${context}
 
 IMPORTANT: When you have access to client data (above), ALWAYS use it to answer questions about clients, statistics, counts, locations, etc. Never give generic responses when you have the actual data.
 
-You have access to powerful tools that let you:
-1. CREATE EMAIL TEMPLATES - When asked to create/draft/design an email, use the create_email_template function to save it
-2. ACCESS COMPANY INFO - Use get_company_profile to personalize emails with company branding
-3. LIST TEMPLATES - Show users what templates exist with list_templates
-4. PREVIEW TEMPLATES - Use get_template to retrieve and show template details to users
-5. BOOKING PAGE - Use get_booking_page_url to get the link for customers to book appointments
+🎯 YOUR CAPABILITIES:
 
-When creating templates:
-- Include proper HTML structure with styling
-- Use company branding colors and information when available
-- Make the email mobile-responsive
-- Include a clear call-to-action
-- After creating, tell the user it's saved and they can find it in the Templates section
+📧 CAMPAIGN MANAGEMENT:
+- createCampaign: Create and send email campaigns to clients
+- sendCampaign: Start sending a campaign immediately
+- getCampaignStats: Analyze campaign performance (open rates, click rates, etc.)
 
-When users ask about booking or appointments:
-- Use get_booking_page_url to provide the booking link
-- Explain that customers can use this link to schedule appointments
-- The link can be included in email templates
+📝 TEMPLATE MANAGEMENT:
+- createEmailTemplate: Create professional email templates with HTML formatting
+- updateEmailTemplate: Modify existing templates
+- sendTestEmail: Send test emails to verify template appearance
+- listTemplates: Browse all available templates
+- get_template: Get full details of a specific template
 
-Be proactive, autonomous, and helpful. Remember context from previous messages in this conversation.`
+👥 CLIENT MANAGEMENT:
+- searchClients: Find clients by location, tags, or search query
+- addClient: Add new clients to the database
+- tagClients: Organize clients with tags
+- getClientStats: Get insights about client distribution and demographics
+
+📅 BOOKING MANAGEMENT:
+- createBooking: Schedule appointments for clients
+- updateBookingStatus: Change booking status (confirm, cancel, complete)
+- listBookings: View upcoming and past bookings
+
+📊 COMPANY INFO:
+- get_company_profile: Access company branding and contact details
+- get_booking_page_url: Get the public booking page link
+
+🚀 HOW TO BE AUTONOMOUS:
+
+1. When asked to "create a campaign for clients in Georgia":
+   - Use searchClients to find Georgia clients
+   - Use createCampaign with those client IDs
+   - Report back with results
+
+2. When asked to "send a follow-up email to hot leads":
+   - Search for clients tagged "hot-lead"
+   - Create a template if needed
+   - Create and send campaign
+   - Show stats
+
+3. When asked about performance:
+   - Use getCampaignStats
+   - Analyze the data
+   - Provide actionable insights
+
+4. When managing bookings:
+   - Use createBooking for new appointments
+   - Use listBookings to check availability
+   - Use updateBookingStatus to manage appointments
+
+ALWAYS execute actions when asked. Don't just explain what could be done - DO IT.
+Be proactive, autonomous, and helpful. Remember context from previous messages.`
     };
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [systemMessage];
@@ -303,7 +355,7 @@ Be proactive, autonomous, and helpful. Remember context from previous messages i
     let response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: messages,
-      tools: tools,
+      tools: getAllTools(),
       tool_choice: "auto",
     });
 
@@ -328,28 +380,38 @@ Be proactive, autonomous, and helpful. Remember context from previous messages i
 
         let functionResponse;
         try {
-          switch (functionName) {
-            case "create_email_template":
-              functionResponse = await createEmailTemplate(functionArgs);
-              break;
-            case "get_company_profile":
-              functionResponse = await getCompanyProfile();
-              break;
-            case "list_templates":
-              functionResponse = await listTemplates();
-              break;
-            case "get_template":
-              functionResponse = await getTemplate(functionArgs);
-              break;
-            case "get_booking_page_url":
-              functionResponse = await getBookingPageUrl();
-              break;
-            default:
-              functionResponse = { error: "Unknown function" };
+          // Try new agent tools first
+          const newToolNames = agentTools.map(t => t.name);
+          if (newToolNames.includes(functionName)) {
+            functionResponse = await executeAgentTool(functionName, functionArgs);
+          } else {
+            // Fall back to legacy tools
+            switch (functionName) {
+              case "create_email_template":
+                functionResponse = await createEmailTemplate(functionArgs);
+                break;
+              case "get_company_profile":
+                functionResponse = await getCompanyProfile();
+                break;
+              case "list_templates":
+                functionResponse = await listTemplates();
+                break;
+              case "get_template":
+                functionResponse = await getTemplate(functionArgs);
+                break;
+              case "get_booking_page_url":
+                functionResponse = await getBookingPageUrl();
+                break;
+              default:
+                functionResponse = { error: "Unknown function" };
+            }
           }
         } catch (error) {
           console.error(`Error executing ${functionName}:`, error);
-          functionResponse = { error: "Function execution failed" };
+          functionResponse = {
+            success: false,
+            error: error instanceof Error ? error.message : "Function execution failed"
+          };
         }
 
         // Add function response to messages
