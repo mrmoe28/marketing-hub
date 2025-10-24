@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Image, Link } from "lucide-react";
 
 type Template = {
   id: string;
@@ -20,6 +20,7 @@ type Template = {
 
 export function TemplateEditForm({ template }: { template: Template }) {
   const router = useRouter();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: template.name,
@@ -62,6 +63,57 @@ export function TemplateEditForm({ template }: { template: Template }) {
       ...prev,
       [e.target.name]: e.target.value,
     }));
+  };
+
+  const insertAtCursor = (textToInsert: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = formData.bodyText;
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+
+    setFormData((prev) => ({
+      ...prev,
+      bodyText: before + textToInsert + after,
+    }));
+
+    // Set cursor position after inserted text
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(
+        start + textToInsert.length,
+        start + textToInsert.length
+      );
+    }, 0);
+  };
+
+  const handleImageUpload = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      // For now, just insert the image name as placeholder
+      // You can extend this to upload to a server and get URL
+      const imageUrl = `[Image: ${file.name}]`;
+      insertAtCursor(imageUrl);
+    };
+    input.click();
+  };
+
+  const handleInsertLink = () => {
+    const url = prompt("Enter the URL:");
+    if (!url) return;
+
+    const text = prompt("Enter link text (optional):");
+    const linkText = text || url;
+
+    insertAtCursor(`[${linkText}](${url})`);
   };
 
   return (
@@ -120,34 +172,45 @@ export function TemplateEditForm({ template }: { template: Template }) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="bodyHtml">
-          HTML Body <span className="text-destructive">*</span>
-        </Label>
-        <Textarea
-          id="bodyHtml"
-          name="bodyHtml"
-          value={formData.bodyHtml}
-          onChange={handleChange}
-          placeholder="<html>...</html>"
-          rows={10}
-          className="font-mono text-sm"
-          required
-        />
-      </div>
-
-      <div className="space-y-2">
         <Label htmlFor="bodyText">
           Plain Text Body <span className="text-destructive">*</span>
         </Label>
-        <Textarea
-          id="bodyText"
-          name="bodyText"
-          value={formData.bodyText}
-          onChange={handleChange}
-          placeholder="Plain text version of the email"
-          rows={6}
-          required
-        />
+        <div className="flex gap-4">
+          <Textarea
+            ref={textareaRef}
+            id="bodyText"
+            name="bodyText"
+            value={formData.bodyText}
+            onChange={handleChange}
+            placeholder="Plain text version of the email"
+            rows={20}
+            className="flex-1"
+            required
+          />
+          <div className="flex flex-col gap-2 w-32">
+            <div className="text-sm font-medium mb-2">Toolbar</div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleImageUpload}
+              className="w-full justify-start"
+            >
+              <Image className="mr-2 h-4 w-4" />
+              Image
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleInsertLink}
+              className="w-full justify-start"
+            >
+              <Link className="mr-2 h-4 w-4" />
+              Link
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="flex justify-end gap-2">
