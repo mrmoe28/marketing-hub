@@ -135,9 +135,7 @@ We're here to help you get the most out of our services. If you have any questio
 Best regards,
 The [Company Name] Team
 
-Schedule your appointment here: [BOOKING_URL]
-
-Click the link above to view available times and book your appointment.`,
+Schedule your appointment: [BOOKING_URL]`,
       get bodyHtml() { return convertTextToHtml(this.bodyText); },
     },
     {
@@ -158,12 +156,10 @@ Here's what you can expect from us:
 
 Would you like to schedule a call or meeting?
 
-Schedule Your Appointment Now → [BOOKING_URL]
-
 Best regards,
 [Company Name]
 
-If you have any questions or need immediate assistance, feel free to contact our support team at any time.`,
+Schedule your appointment: [BOOKING_URL]`,
       get bodyHtml() { return convertTextToHtml(this.bodyText); },
     },
     {
@@ -183,16 +179,12 @@ As a valued customer of [Company Name], we're excited to offer you exclusive ben
 
 This offer is available for a limited time only.
 
-Get Started Today → [BOOKING_URL]
-
 Don't miss out on this opportunity to save while getting the best service.
 
 Best regards,
 The [Company Name] Team
 
-Schedule your appointment here: [BOOKING_URL]
-
-Click the link above to view available times and book your appointment.`,
+Schedule your appointment here: [BOOKING_URL]`,
       get bodyHtml() { return convertTextToHtml(this.bodyText); },
     },
   ];
@@ -207,9 +199,20 @@ Click the link above to view available times and book your appointment.`,
       const created = await prisma.emailTemplate.create({
         data: template,
       });
-      createdTemplates.push(created.name);
+      createdTemplates.push(`${created.name} (created)`);
     } else {
-      createdTemplates.push(`${existing.name} (already exists)`);
+      // Update existing template with new content
+      await prisma.emailTemplate.update({
+        where: { id: existing.id },
+        data: {
+          bodyText: template.bodyText,
+          bodyHtml: template.bodyHtml,
+          subject: template.subject,
+          description: template.description,
+          category: template.category,
+        },
+      });
+      createdTemplates.push(`${existing.name} (updated)`);
     }
   }
 

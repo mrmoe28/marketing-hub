@@ -86,9 +86,7 @@ const getBookingLinkText = () => {
     ? `${window.location.origin}/book`
     : '[BOOKING_URL]';
 
-  return `Schedule your appointment here: ${bookingUrl}
-
-Click the link above to view available times and book your appointment.`;
+  return `Schedule your appointment: ${bookingUrl}`;
 };
 
 export function TemplateEditForm({ template }: { template: Template }) {
