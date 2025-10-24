@@ -44,7 +44,7 @@ export default async function ClientsPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="group relative overflow-hidden rounded-lg border bg-card p-6 shadow-sm transition-all hover:shadow-md">
+        <div className="group relative overflow-hidden rounded-lg border bg-card p-6 shadow-lg transition-all hover:shadow-xl">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
           <div className="relative">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -55,7 +55,7 @@ export default async function ClientsPage() {
           </div>
         </div>
 
-        <div className="group relative overflow-hidden rounded-lg border bg-card p-6 shadow-sm transition-all hover:shadow-md">
+        <div className="group relative overflow-hidden rounded-lg border bg-card p-6 shadow-lg transition-all hover:shadow-xl">
           <div className="absolute inset-0 bg-gradient-to-br from-green-600/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
           <div className="relative">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -66,7 +66,7 @@ export default async function ClientsPage() {
           </div>
         </div>
 
-        <div className="group relative overflow-hidden rounded-lg border bg-card p-6 shadow-sm transition-all hover:shadow-md">
+        <div className="group relative overflow-hidden rounded-lg border bg-card p-6 shadow-lg transition-all hover:shadow-xl">
           <div className="absolute inset-0 bg-gradient-to-br from-violet-600/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
           <div className="relative">
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -77,7 +77,7 @@ export default async function ClientsPage() {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card shadow-sm">
+      <div className="rounded-lg border bg-card shadow-lg">
         <div className="border-b p-6">
           <h2 className="text-lg font-semibold">All Clients ({clients.length})</h2>
           <p className="text-sm text-muted-foreground">View and manage your imported clients</p>

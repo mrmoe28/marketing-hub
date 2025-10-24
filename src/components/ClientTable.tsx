@@ -146,11 +146,11 @@ export function ClientTable({ clients }: ClientTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="sticky left-0 z-10 bg-background min-w-[200px]">Email</TableHead>
-              <TableHead className="min-w-[150px]">Name</TableHead>
+              <TableHead className="sticky left-0 z-10 bg-background min-w-[200px] shadow-md">Name</TableHead>
+              <TableHead className="min-w-[150px]">Phone</TableHead>
+              <TableHead className="min-w-[200px]">Address</TableHead>
+              <TableHead className="min-w-[200px]">Email</TableHead>
               <TableHead className="min-w-[150px]">Company</TableHead>
-              <TableHead className="min-w-[150px]">Location</TableHead>
-              <TableHead className="min-w-[120px]">Phone</TableHead>
               <TableHead className="min-w-[150px]">Tags</TableHead>
               {/* Dynamic custom field columns */}
               {customFieldNames.map((fieldName) => (
@@ -163,36 +163,37 @@ export function ClientTable({ clients }: ClientTableProps) {
           <TableBody>
             {clients.map((client) => {
               const customFields = (client.customFields || {}) as Record<string, unknown>;
+              const fullAddress = [
+                client.address1,
+                client.address2,
+                client.city,
+                client.state,
+                client.postalCode
+              ].filter(Boolean).join(", ");
 
               return (
                 <TableRow key={client.id} className="group">
-                  <TableCell className="sticky left-0 z-10 bg-background group-hover:bg-accent">
+                  <TableCell className="sticky left-0 z-10 bg-background group-hover:bg-accent shadow-md">
                     <Link
                       href={`/clients/${client.id}`}
                       className="font-medium text-blue-600 hover:underline dark:text-blue-400"
                     >
-                      {client.email}
+                      {client.firstName || client.lastName
+                        ? `${client.firstName || ""} ${client.lastName || ""}`.trim()
+                        : <span className="text-muted-foreground">—</span>}
                     </Link>
                   </TableCell>
                   <TableCell>
-                    {client.firstName || client.lastName
-                      ? `${client.firstName || ""} ${client.lastName || ""}`.trim()
-                      : <span className="text-muted-foreground">—</span>}
+                    {client.phone || <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell>
+                    {fullAddress || <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {client.email}
                   </TableCell>
                   <TableCell>
                     {client.company || <span className="text-muted-foreground">—</span>}
-                  </TableCell>
-                  <TableCell>
-                    {client.city && client.state ? (
-                      `${client.city}, ${client.state}`
-                    ) : client.city || client.state ? (
-                      client.city || client.state
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {client.phone || <span className="text-muted-foreground">—</span>}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
