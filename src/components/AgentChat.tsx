@@ -30,7 +30,7 @@ export function AgentChat() {
   const [loading, setLoading] = useState(false);
   const [includeClientData, setIncludeClientData] = useState(true);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showHistory, setShowHistory] = useState(true);
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -125,7 +125,7 @@ export function AgentChat() {
           <Sparkles className="h-6 w-6" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[900px] max-h-[80vh] flex">
+      <DialogContent className="sm:max-w-[1100px] max-h-[85vh] flex">
         {/* Chat History Sidebar */}
         {showHistory && (
           <div className="w-64 border-r flex-shrink-0 overflow-hidden">
