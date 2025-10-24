@@ -11,7 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Send, Loader2, History } from "lucide-react";
+import { Sparkles, Send, Loader2, History, Zap } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp?: string;
+  actions?: string[]; // Track which tools were executed
 }
 
 export function AgentChat() {
@@ -28,6 +29,7 @@ export function AgentChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [currentActions, setCurrentActions] = useState<string[]>([]);
   const [includeClientData, setIncludeClientData] = useState(true);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(true);
@@ -95,9 +97,20 @@ export function AgentChat() {
         throw new Error(data.error || "Failed to get response");
       }
 
+      // Show which tools were executed (for visual feedback during processing)
+      if (data.executedTools && data.executedTools.length > 0) {
+        setCurrentActions(data.executedTools);
+        // Brief delay to show the actions before clearing
+        setTimeout(() => setCurrentActions([]), 500);
+      }
+
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.response },
+        {
+          role: "assistant",
+          content: data.response,
+          actions: data.executedTools
+        },
       ]);
 
       // Update conversation ID if this was a new conversation
@@ -112,6 +125,7 @@ export function AgentChat() {
       });
     } finally {
       setLoading(false);
+      setCurrentActions([]);
     }
   }
 
@@ -233,6 +247,19 @@ export function AgentChat() {
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  {msg.role === "assistant" && msg.actions && msg.actions.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-border/50">
+                      {msg.actions.map((action, idx) => (
+                        <div
+                          key={idx}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-medium"
+                        >
+                          <Zap className="h-3 w-3" />
+                          <span>{action}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))
@@ -243,7 +270,19 @@ export function AgentChat() {
                 <Sparkles className="h-4 w-4 text-white" />
               </div>
               <div className="flex-1 rounded-lg bg-muted p-3">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {currentActions.length > 0 && (
+                    <div className="flex flex-col gap-1">
+                      {currentActions.map((action, idx) => (
+                        <div key={idx} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Zap className="h-3 w-3 text-blue-500" />
+                          <span>{action}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

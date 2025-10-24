@@ -361,6 +361,7 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
 
     let responseMessage = response.choices[0].message;
     const toolCalls = responseMessage.tool_calls;
+    const executedTools: string[] = [];
 
     // Handle tool calls if any
     if (toolCalls && toolCalls.length > 0) {
@@ -377,6 +378,7 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
         const functionArgs = JSON.parse(toolCall.function.arguments);
 
         console.log(`Executing function: ${functionName}`, functionArgs);
+        executedTools.push(functionName);
 
         let functionResponse;
         try {
@@ -473,6 +475,7 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
       response: text,
       clientDataIncluded: includeClientData,
       conversationId: savedConversationId,
+      executedTools: executedTools.length > 0 ? executedTools : undefined,
     });
   } catch (error) {
     console.error("=== CHAT API ERROR ===");
