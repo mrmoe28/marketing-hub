@@ -337,29 +337,32 @@ export function TemplateEditForm({ template }: { template: Template }) {
           />
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="bodyText">
-              Email Editor <span className="text-destructive">*</span>
-            </Label>
-            <div className="text-xs text-muted-foreground">
-              {wordCount} words • {charCount} characters
-            </div>
-          </div>
-          <div className="grid grid-cols-[1fr,auto,1fr] gap-3">
-            {/* Editor Column */}
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-muted-foreground">Template (with merge tags)</div>
-              <RichTextEditor
-                content={formData.bodyHtml}
-                onChange={(html) => setFormData(prev => ({ ...prev, bodyHtml: html, bodyText: html.replace(/<[^>]*>/g, '') }))}
-                onReady={(editorInstance) => setEditor(editorInstance)}
-                placeholder="Start typing your email..."
-              />
+        <div className="grid grid-cols-[1fr,400px] gap-4">
+          {/* Left Side: Editor + Toolbar */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="bodyText">
+                Email Editor <span className="text-destructive">*</span>
+              </Label>
+              <div className="text-xs text-muted-foreground">
+                {wordCount} words • {charCount} characters
+              </div>
             </div>
 
-            {/* Toolbar Column */}
-            <div className="flex flex-col gap-1.5 w-44 shadow-lg p-3 rounded-lg border bg-card">
+            <div className="grid grid-cols-[1fr,auto] gap-3">
+              {/* Editor */}
+              <div className="space-y-1">
+                <div className="text-xs font-medium text-muted-foreground">Template (with merge tags)</div>
+                <RichTextEditor
+                  content={formData.bodyHtml}
+                  onChange={(html) => setFormData(prev => ({ ...prev, bodyHtml: html, bodyText: html.replace(/<[^>]*>/g, '') }))}
+                  onReady={(editorInstance) => setEditor(editorInstance)}
+                  placeholder="Start typing your email..."
+                />
+              </div>
+
+              {/* Toolbar */}
+              <div className="flex flex-col gap-1.5 w-44 shadow-lg p-3 rounded-lg border bg-card h-fit">
               <div className="text-sm font-semibold mb-1">Toolbar</div>
 
               {/* Variables */}
@@ -567,23 +570,24 @@ export function TemplateEditForm({ template }: { template: Template }) {
                 AI Assist
               </Button>
             </div>
+            </div>
+          </div>
 
-            {/* Live Preview Column */}
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-muted-foreground">Live Preview (what recipients see)</div>
-              <div className="shadow-lg rounded-lg border bg-card p-4 min-h-[400px] max-h-[500px] overflow-y-auto">
-                <div className="space-y-3">
-                  <div className="border-b pb-2">
-                    <div className="text-xs text-muted-foreground mb-1">Subject:</div>
-                    <div className="font-semibold text-sm">{getPreviewText().subject}</div>
-                  </div>
-                  <div
-                    className="prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{
-                      __html: getPreviewText().body
-                    }}
-                  />
+          {/* Right Side: Live Preview */}
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-muted-foreground">Live Preview (what recipients see)</div>
+            <div className="shadow-lg rounded-lg border bg-card p-4 min-h-[600px] max-h-[700px] overflow-y-auto sticky top-4">
+              <div className="space-y-3">
+                <div className="border-b pb-2">
+                  <div className="text-xs text-muted-foreground mb-1">Subject:</div>
+                  <div className="font-semibold text-sm">{getPreviewText().subject}</div>
                 </div>
+                <div
+                  className="prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{
+                    __html: getPreviewText().body
+                  }}
+                />
               </div>
             </div>
           </div>
