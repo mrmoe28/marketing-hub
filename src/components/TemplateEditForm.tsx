@@ -224,14 +224,28 @@ export function TemplateEditForm({ template }: { template: Template }) {
       return;
     }
 
+    setIsAIProcessing(true); // Reuse loading state
     try {
-      // Implement your test email API here
-      alert(`Test email would be sent to: ${testEmail}`);
+      const response = await fetch(`/api/templates/${template.id}/test-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: testEmail }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send test email");
+      }
+
+      alert(`✅ Test email sent successfully to ${testEmail}!`);
       setShowTestEmail(false);
       setTestEmail("");
     } catch (error) {
       console.error("Error sending test email:", error);
-      alert("Failed to send test email");
+      alert(`❌ Failed to send test email: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setIsAIProcessing(false);
     }
   };
 
@@ -591,7 +605,7 @@ export function TemplateEditForm({ template }: { template: Template }) {
           <DialogHeader>
             <DialogTitle>Send Test Email</DialogTitle>
             <DialogDescription>
-              Enter your email address to receive a test
+              Enter your email address to receive a test with sample data
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -600,10 +614,24 @@ export function TemplateEditForm({ template }: { template: Template }) {
               placeholder="your@email.com"
               value={testEmail}
               onChange={(e) => setTestEmail(e.target.value)}
+              disabled={isAIProcessing}
             />
-            <Button onClick={handleSendTest} className="w-full">
-              <Mail className="mr-2 h-4 w-4" />
-              Send Test Email
+            <Button
+              onClick={handleSendTest}
+              disabled={isAIProcessing || !testEmail}
+              className="w-full"
+            >
+              {isAIProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Mail className="mr-2 h-4 w-4" />
+                  Send Test Email
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>
