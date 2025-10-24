@@ -2,6 +2,34 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// Helper to convert text to HTML with clickable links
+function convertTextToHtml(text: string): string {
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  html = html.replace(
+    /(https?:\/\/[^\s]+)/g,
+    '<a href="$1" style="color: #2563eb; text-decoration: underline;">$1</a>'
+  );
+
+  html = html.replace(/\n/g, '<br>');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #333;">
+    ${html}
+  </div>
+</body>
+</html>`;
+}
+
 async function main() {
   console.log("Seeding database...");
 
@@ -98,7 +126,6 @@ async function main() {
       subject: "Welcome to [Company Name]!",
       category: "welcome",
       description: "A warm welcome email for new customers",
-      bodyHtml: `<p>Hi [First Name],</p><p>Welcome to [Company Name]! We're excited to have you.</p>`,
       bodyText: `Hi [First Name],
 
 Welcome to [Company Name]! We're excited to have you on board.
@@ -111,13 +138,13 @@ The [Company Name] Team
 Schedule your appointment here: [BOOKING_URL]
 
 Click the link above to view available times and book your appointment.`,
+      get bodyHtml() { return convertTextToHtml(this.bodyText); },
     },
     {
       name: "Follow-Up Email",
       subject: "Following up on your inquiry",
       category: "follow-up",
       description: "Professional follow-up email for prospects",
-      bodyHtml: `<p>Hi [First Name],</p><p>I wanted to follow up regarding your recent inquiry.</p>`,
       bodyText: `Hi [First Name],
 
 I wanted to follow up regarding your recent inquiry with [Company Name].
@@ -137,13 +164,13 @@ Best regards,
 [Company Name]
 
 If you have any questions or need immediate assistance, feel free to contact our support team at any time.`,
+      get bodyHtml() { return convertTextToHtml(this.bodyText); },
     },
     {
       name: "Special Offer",
       subject: "🎉 Special Offer Just for You, [First Name]!",
       category: "promotion",
       description: "Promotional email for special offers and deals",
-      bodyHtml: `<p>Hi [First Name],</p><p>We have a special offer just for you!</p>`,
       bodyText: `Hi [First Name],
 
 We have a special offer just for you! 🎉
@@ -166,6 +193,7 @@ The [Company Name] Team
 Schedule your appointment here: [BOOKING_URL]
 
 Click the link above to view available times and book your appointment.`,
+      get bodyHtml() { return convertTextToHtml(this.bodyText); },
     },
   ];
 

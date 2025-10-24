@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { createJobsForAudience } from "@/lib/tracking";
+import { convertTextToHtml, wrapInEmailTemplate } from "@/lib/email-utils";
 
 const CreateCampaignSchema = z.object({
   name: z.string().min(1),
@@ -19,14 +20,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = CreateCampaignSchema.parse(body);
 
+    // Convert bodyText to HTML with clickable links if bodyHtml not provided
+    const bodyText = validated.bodyText || "Draft email...";
+    const bodyHtml = validated.bodyHtml || wrapInEmailTemplate(convertTextToHtml(bodyText));
+
     const campaign = await db.campaign.create({
       data: {
         name: validated.name,
         subject: validated.subject || "Untitled Campaign",
         fromEmail: validated.fromEmail,
         fromName: validated.fromName || null,
-        bodyHtml: validated.bodyHtml || "<p>Draft email...</p>",
-        bodyText: validated.bodyText || "Draft email...",
+        bodyHtml: bodyHtml,
+        bodyText: bodyText,
         status: "DRAFT",
       },
     });

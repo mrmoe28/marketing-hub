@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { emailProvider } from "@/lib/email";
+import { convertTextToHtml, wrapInEmailTemplate } from "@/lib/email-utils";
 
 export const dynamic = 'force-dynamic';
 
@@ -53,6 +54,9 @@ export async function POST(
       subject = subject.replace(new RegExp(tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
     });
 
+    // Convert plain text to HTML with clickable links
+    const htmlBody = wrapInEmailTemplate(convertTextToHtml(bodyText));
+
     // Get sender email - use Resend's test domain if EMAIL_FROM not set
     const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
     const fromName = process.env.EMAIL_FROM_NAME || "Marketing Hub Test";
@@ -66,7 +70,7 @@ export async function POST(
         from: fromEmail,
         fromName: fromName,
         subject: `[TEST] ${subject}`,
-        html: `<pre style="font-family: system-ui, -apple-system, sans-serif; white-space: pre-wrap; word-wrap: break-word;">${bodyText}</pre>`,
+        html: htmlBody,
         text: bodyText,
       });
 
