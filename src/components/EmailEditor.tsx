@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -82,20 +82,41 @@ export function EmailEditor({ onEmailChange }: EmailEditorProps) {
   }
 
   const handleManualUpdate = () => {
-    // Add signature to plain text email
-    const textWithSignature = bodyText ? bodyText + "\n\n---\nEKO SOLAR.LLC\nVisit our website: www.ekosolarpros.com" : "";
+    // Always add signature to emails
+    const signature = "\n\n---\nEKO SOLAR.LLC\nVisit our website: www.ekosolarpros.com";
+    const htmlSignature = `<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5;"><p style="margin: 0; font-size: 14px; color: #666;">EKO SOLAR.LLC<br><a href="https://www.ekosolarpros.com" style="color: #0066cc; text-decoration: underline;">Visit our website</a></p></div>`;
     
-    // Convert text to HTML and add signature
-    const htmlWithSignature = bodyText ? 
-      `${bodyText.replace(/\n/g, '<br>')}<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5;"><p style="margin: 0; font-size: 14px; color: #666;">EKO SOLAR.LLC<br><a href="https://www.ekosolarpros.com" style="color: #0066cc; text-decoration: underline;">Visit our website</a></p></div>` 
-      : "";
+    // For text version, check if signature already exists before adding
+    let textWithSignature = bodyText || "";
+    if (textWithSignature && !textWithSignature.includes('www.ekosolarpros.com')) {
+      textWithSignature = textWithSignature + signature;
+    }
+    
+    // Build proper HTML with signature
+    let finalHtml = bodyHtml;
+    if (!finalHtml && bodyText) {
+      // Convert plain text to HTML if no HTML version exists
+      finalHtml = bodyText.replace(/\n/g, '<br>');
+    }
+    
+    // Add signature to HTML if it doesn't already have it
+    if (finalHtml && !finalHtml.includes('ekosolarpros.com')) {
+      finalHtml = finalHtml + htmlSignature;
+    }
     
     onEmailChange({ 
       subject, 
-      html: bodyHtml || htmlWithSignature, 
+      html: finalHtml, 
       text: textWithSignature 
     });
   };
+
+  // Call handleManualUpdate when component mounts or when bodyText changes from empty to having content
+  useEffect(() => {
+    if (bodyText && !bodyHtml) {
+      handleManualUpdate();
+    }
+  }, []);
 
   return (
     <Card>
@@ -159,8 +180,8 @@ export function EmailEditor({ onEmailChange }: EmailEditorProps) {
               value={subject}
               onChange={(e) => {
                 setSubject(e.target.value);
-                handleManualUpdate();
               }}
+              onBlur={handleManualUpdate}
             />
           </div>
 
@@ -173,8 +194,8 @@ export function EmailEditor({ onEmailChange }: EmailEditorProps) {
               value={bodyText}
               onChange={(e) => {
                 setBodyText(e.target.value);
-                handleManualUpdate();
               }}
+              onBlur={handleManualUpdate}
             />
           </div>
         </div>

@@ -10,6 +10,14 @@ interface EmailPreviewProps {
 }
 
 export function EmailPreview({ subject, html, fromEmail, fromName }: EmailPreviewProps) {
+  // Add unsubscribe footer to match what will be sent
+  const previewHtml = html ? 
+    `${html}
+    <p style="font-size:12px;color:#666;margin-top:40px;text-align:center;">
+      <a href="#" style="color:#666;">Unsubscribe</a>
+    </p>` 
+    : "<p>(No content)</p>";
+
   return (
     <Card>
       <CardHeader>
@@ -31,7 +39,7 @@ export function EmailPreview({ subject, html, fromEmail, fromName }: EmailPrevie
 
           <div
             className="prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: html || "<p>(No content)</p>" }}
+            dangerouslySetInnerHTML={{ __html: previewHtml }}
           />
         </div>
       </CardContent>
