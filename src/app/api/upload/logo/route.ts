@@ -1,55 +1,48 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import { nanoid } from "nanoid";
+import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 
-export async function POST(request: NextRequest) {
+export const runtime = "nodejs";
+
+// This endpoint handles client-side uploads to Vercel Blob for company logos
+export async function POST(request: NextRequest): Promise<NextResponse> {
+  const body = (await request.json()) as HandleUploadBody;
+
   try {
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
-    
-    if (!file) {
-      return NextResponse.json({ error: "No file provided" }, { status: 400 });
-    }
+    const jsonResponse = await handleUpload({
+      body,
+      request,
+      onBeforeGenerateToken: async (pathname: string) => {
+        // Validate file type from pathname
+        const extension = pathname.split('.').pop()?.toLowerCase();
+        const validExts = ['jpg', 'jpeg', 'png', 'svg', 'webp'];
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "Invalid file type. Only images are allowed" }, { status: 400 });
-    }
+        if (!extension || !validExts.includes(extension)) {
+          throw new Error(`Invalid file type. Supported: ${validExts.join(', ')}`);
+        }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: "File size exceeds 5MB limit" }, { status: 400 });
-    }
-
-    // Convert file to buffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-
-    // Generate unique filename
-    const fileExtension = path.extname(file.name);
-    const fileName = `logo-${nanoid(10)}${fileExtension}`;
-
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", "logos");
-    await mkdir(uploadsDir, { recursive: true });
-
-    // Save file
-    const filePath = path.join(uploadsDir, fileName);
-    await writeFile(filePath, buffer);
-
-    // Return the public URL
-    const publicUrl = `/uploads/logos/${fileName}`;
-
-    return NextResponse.json({ 
-      url: publicUrl,
-      fileName: fileName 
+        return {
+          allowedContentTypes: ['image/jpeg', 'image/png', 'image/svg+xml', 'image/webp'],
+          tokenPayload: JSON.stringify({
+            // Optional: Add user authentication here
+          }),
+          maximumSizeInBytes: 5 * 1024 * 1024, // 5MB
+          addRandomSuffix: true,
+          pathname: `company-logos/${Date.now()}-${pathname}`,
+        };
+      },
+      onUploadCompleted: async ({ blob }) => {
+        console.log('Logo upload completed:', blob.url);
+      },
     });
+
+    return NextResponse.json(jsonResponse);
   } catch (error) {
     console.error("Logo upload error:", error);
     return NextResponse.json(
-      { error: "Failed to upload logo" },
-      { status: 500 }
+      {
+        error: error instanceof Error ? error.message : "Failed to upload logo",
+      },
+      { status: 400 }
     );
   }
 }

@@ -113,21 +113,17 @@ export function SettingsForm({ profile }: { profile: CompanyProfile }) {
     }
 
     setLogoUploading(true);
-    
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
 
-      const response = await fetch("/api/upload/logo", {
-        method: "POST",
-        body: formData,
+    try {
+      // Use Vercel Blob client-side upload
+      const { upload } = await import('@vercel/blob/client');
+      const blob = await upload(file.name, file, {
+        access: 'public',
+        handleUploadUrl: '/api/upload/logo',
       });
 
-      if (!response.ok) throw new Error("Upload failed");
+      setFormData((prev) => ({ ...prev, companyLogo: blob.url }));
 
-      const data = await response.json();
-      setFormData((prev) => ({ ...prev, companyLogo: data.url }));
-      
       alert("Logo uploaded successfully!");
     } catch (error) {
       console.error("Logo upload error:", error);
