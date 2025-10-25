@@ -1,13 +1,25 @@
 "use client";
 
 import { useEditor, EditorContent } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import TextAlign from "@tiptap/extension-text-align";
 import ResizableImage from "tiptap-extension-resize-image";
 import Video from "tiptap-extension-video";
 import Resizable from "tiptap-extension-resizable";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Link as LinkIcon,
+  Trash2,
+  Type,
+} from "lucide-react";
 
 interface RichTextEditorProps {
   content: string;
@@ -22,6 +34,11 @@ export function RichTextEditor({
   onReady,
   placeholder = "Start typing your email...",
 }: RichTextEditorProps) {
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [showAltInput, setShowAltInput] = useState(false);
+  const [altText, setAltText] = useState("");
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -37,6 +54,9 @@ export function RichTextEditor({
       }),
       Placeholder.configure({
         placeholder,
+      }),
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
       }),
       ResizableImage.configure({
         inline: false,
@@ -92,8 +112,207 @@ export function RichTextEditor({
     }
   }, [content, editor]);
 
+  // Helper to check if image or video is selected
+  const isMediaSelected = () => {
+    if (!editor) return false;
+    const { state } = editor;
+    const { selection } = state;
+    const node = selection.$from.node();
+    return node?.type.name === "image" || node?.type.name === "video";
+  };
+
+  // Handle image alignment
+  const setAlignment = (align: "left" | "center" | "right") => {
+    if (!editor) return;
+    const { state } = editor;
+    const { selection } = state;
+    const node = selection.$from.node();
+
+    if (node?.type.name === "image" || node?.type.name === "video") {
+      editor
+        .chain()
+        .focus()
+        .updateAttributes(node.type.name, {
+          style: `display: block; margin-${align === "center" ? "left: auto; margin-right: auto" : align === "right" ? "left: auto; margin-right: 0" : "left: 0; margin-right: auto"}`,
+        })
+        .run();
+    }
+  };
+
+  // Handle adding link to image
+  const handleAddLink = () => {
+    if (!linkUrl) return;
+    if (!editor) return;
+
+    const { state } = editor;
+    const { selection } = state;
+    const node = selection.$from.node();
+
+    if (node?.type.name === "image" || node?.type.name === "video") {
+      // Wrap the media in a link
+      const mediaHtml = `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${state.doc.textContent}</a>`;
+      editor.chain().focus().insertContent(mediaHtml).run();
+      setShowLinkInput(false);
+      setLinkUrl("");
+    }
+  };
+
+  // Handle adding alt text
+  const handleAddAltText = () => {
+    if (!altText) return;
+    if (!editor) return;
+
+    const { state } = editor;
+    const { selection } = state;
+    const node = selection.$from.node();
+
+    if (node?.type.name === "image") {
+      editor
+        .chain()
+        .focus()
+        .updateAttributes("image", { alt: altText })
+        .run();
+      setShowAltInput(false);
+      setAltText("");
+    }
+  };
+
+  // Handle deleting media
+  const handleDelete = () => {
+    if (!editor) return;
+    editor.chain().focus().deleteSelection().run();
+  };
+
+  if (!editor) {
+    return null;
+  }
+
   return (
     <div className="border rounded-lg shadow-lg overflow-hidden bg-white">
+      {/* Bubble Menu for Images/Videos */}
+      {editor && (
+        <BubbleMenu
+          editor={editor}
+          shouldShow={({ editor, state }) => {
+            const { selection } = state;
+            const node = selection.$from.node();
+            return node?.type.name === "image" || node?.type.name === "video";
+          }}
+        >
+          <div className="flex items-center gap-1 bg-gray-900 text-white rounded-lg p-2 shadow-lg">
+            {/* Alignment Controls */}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setAlignment("left")}
+              className="h-8 w-8 p-0 hover:bg-gray-700"
+              title="Align Left"
+            >
+              <AlignLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setAlignment("center")}
+              className="h-8 w-8 p-0 hover:bg-gray-700"
+              title="Align Center"
+            >
+              <AlignCenter className="h-4 w-4" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setAlignment("right")}
+              className="h-8 w-8 p-0 hover:bg-gray-700"
+              title="Align Right"
+            >
+              <AlignRight className="h-4 w-4" />
+            </Button>
+
+            <div className="w-px h-6 bg-gray-600 mx-1" />
+
+            {/* Link Button */}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowLinkInput(!showLinkInput)}
+              className="h-8 w-8 p-0 hover:bg-gray-700"
+              title="Add Link"
+            >
+              <LinkIcon className="h-4 w-4" />
+            </Button>
+
+            {/* Alt Text Button (Images only) */}
+            {editor.state.selection.$from.node()?.type.name === "image" && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setShowAltInput(!showAltInput)}
+                className="h-8 w-8 p-0 hover:bg-gray-700"
+                title="Add Alt Text"
+              >
+                <Type className="h-4 w-4" />
+              </Button>
+            )}
+
+            <div className="w-px h-6 bg-gray-600 mx-1" />
+
+            {/* Delete Button */}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleDelete}
+              className="h-8 w-8 p-0 hover:bg-red-600"
+              title="Delete"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+
+            {/* Link Input */}
+            {showLinkInput && (
+              <div className="flex items-center gap-2 ml-2">
+                <Input
+                  type="url"
+                  placeholder="Enter URL"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleAddLink()}
+                  className="h-8 w-48 text-sm bg-gray-800 border-gray-600"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAddLink}
+                  className="h-8"
+                >
+                  Add
+                </Button>
+              </div>
+            )}
+
+            {/* Alt Text Input */}
+            {showAltInput && (
+              <div className="flex items-center gap-2 ml-2">
+                <Input
+                  type="text"
+                  placeholder="Alt text"
+                  value={altText}
+                  onChange={(e) => setAltText(e.target.value)}
+                  onKeyPress={(e) => e.key === "Enter" && handleAddAltText()}
+                  className="h-8 w-48 text-sm bg-gray-800 border-gray-600"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleAddAltText}
+                  className="h-8"
+                >
+                  Add
+                </Button>
+              </div>
+            )}
+          </div>
+        </BubbleMenu>
+      )}
+
       <style jsx global>{`
         .ProseMirror img {
           max-width: 100%;
