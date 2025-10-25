@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { RichTextEditor } from "@/components/RichTextEditor";
-import type { Editor } from "@tiptap/react";
 import {
   Loader2,
   Save,
@@ -92,7 +91,7 @@ const getBookingLinkText = () => {
 
 export function TemplateEditForm({ template }: { template: Template }) {
   const router = useRouter();
-  const [editor, setEditor] = useState<Editor | null>(null);
+  const [editor, setEditor] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showTestEmail, setShowTestEmail] = useState(false);
