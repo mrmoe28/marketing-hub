@@ -5,6 +5,8 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import ResizableImage from "tiptap-extension-resize-image";
+import Video from "tiptap-extension-video";
+import Resizable from "tiptap-extension-resizable";
 import { useEffect } from "react";
 
 interface RichTextEditorProps {
@@ -41,6 +43,26 @@ export function RichTextEditor({
         allowBase64: true,
         HTMLAttributes: {
           class: "rounded-lg cursor-pointer",
+        },
+      }),
+      Video.configure({
+        HTMLAttributes: {
+          class: "rounded-lg cursor-pointer",
+          controls: true,
+        },
+      }),
+      Resizable.configure({
+        types: ["image", "video"],
+        handlerStyle: {
+          width: "10px",
+          height: "10px",
+          background: "#4F46E5",
+          border: "2px solid white",
+          borderRadius: "50%",
+        },
+        layerStyle: {
+          outline: "3px solid #4F46E5",
+          outlineOffset: "2px",
         },
       }),
     ],
@@ -80,6 +102,18 @@ export function RichTextEditor({
         }
 
         .ProseMirror img.ProseMirror-selectednode {
+          outline: 3px solid #4F46E5;
+          outline-offset: 2px;
+        }
+
+        .ProseMirror video {
+          max-width: 100%;
+          height: auto;
+          cursor: pointer;
+          border-radius: 0.5rem;
+        }
+
+        .ProseMirror video.ProseMirror-selectednode {
           outline: 3px solid #4F46E5;
           outline-offset: 2px;
         }

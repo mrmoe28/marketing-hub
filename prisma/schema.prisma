@@ -160,6 +160,15 @@ model CompanyProfile {
   defaultSignature  String?  @db.Text
   defaultFromName   String?
   defaultFromEmail  String?
+
+  // Booking Page Customization
+  bookingPageTitle       String?  @default("Schedule an Appointment")
+  bookingPageSubtitle    String?  @default("Book a convenient time for your visit")
+  bookingPageHeader      String?  @default("Request an Appointment")
+  bookingPageDescription String?  @db.Text @default("Fill out the form below and we'll get back to you to confirm your appointment")
+  businessHours          String?  @default("Monday - Friday, 9:00 AM - 5:00 PM")
+  showInfoCards          Boolean  @default(true)
+  bookingPageBgColor     String?  @default("from-blue-50 to-violet-50")
 }
 
 model AgentMemory {

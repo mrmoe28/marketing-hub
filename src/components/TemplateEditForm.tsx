@@ -12,6 +12,7 @@ import {
   Loader2,
   Save,
   Image,
+  Video,
   Link,
   Tag,
   Eye,
@@ -193,6 +194,46 @@ export function TemplateEditForm({ template }: { template: Template }) {
       } catch (error) {
         console.error("Error uploading image:", error);
         alert(`Failed to upload image: ${error instanceof Error ? error.message : "Unknown error"}`);
+      } finally {
+        setIsAIProcessing(false);
+      }
+    };
+    input.click();
+  };
+
+  const handleVideoUpload = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "video/mp4,video/webm,video/ogg,video/quicktime";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      setIsAIProcessing(true);
+      try {
+        // Upload video to server
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("/api/images/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "Upload failed");
+        }
+
+        const data = await response.json();
+
+        // Insert video into editor
+        if (editor) {
+          editor.chain().focus().setVideo({ src: data.url }).run();
+        }
+      } catch (error) {
+        console.error("Error uploading video:", error);
+        alert(`Failed to upload video: ${error instanceof Error ? error.message : "Unknown error"}`);
       } finally {
         setIsAIProcessing(false);
       }
@@ -567,6 +608,24 @@ export function TemplateEditForm({ template }: { template: Template }) {
                   <Image className="mr-2 h-3 w-3" />
                 )}
                 {isAIProcessing ? "Uploading..." : "Image"}
+              </Button>
+
+              {/* Video */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleVideoUpload}
+                disabled={isAIProcessing}
+                className="w-full justify-start text-xs"
+                title="Upload MP4, WebM, OGG, or MOV (max 50MB, 30 seconds)"
+              >
+                {isAIProcessing ? (
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                ) : (
+                  <Video className="mr-2 h-3 w-3" />
+                )}
+                {isAIProcessing ? "Uploading..." : "Video"}
               </Button>
 
               {/* Link */}

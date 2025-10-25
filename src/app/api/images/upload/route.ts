@@ -16,25 +16,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/svg+xml", "image/webp"];
+    const validImageTypes = ["image/jpeg", "image/jpg", "image/png", "image/svg+xml", "image/webp"];
+    const validVideoTypes = ["video/mp4", "video/webm", "video/ogg", "video/quicktime"];
+    const validTypes = [...validImageTypes, ...validVideoTypes];
+
     if (!validTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: "Invalid file type. Supported: JPEG, PNG, SVG, WebP" },
+        { error: "Invalid file type. Supported: JPEG, PNG, SVG, WebP, MP4, WebM, OGG, MOV" },
         { status: 400 }
       );
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // Validate file size (max 5MB for images, 50MB for videos)
+    const isVideo = validVideoTypes.includes(file.type);
+    const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024; // 50MB for video, 5MB for images
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: "File too large. Maximum size: 5MB" },
+        { error: `File too large. Maximum size: ${isVideo ? '50MB' : '5MB'}` },
         { status: 400 }
       );
     }
 
     // Upload to Vercel Blob
-    const blob = await put(`email-images/${Date.now()}-${file.name}`, file, {
+    const folder = isVideo ? "email-videos" : "email-images";
+    const blob = await put(`${folder}/${Date.now()}-${file.name}`, file, {
       access: "public",
       addRandomSuffix: true,
     });

@@ -24,6 +24,13 @@ type CompanyProfile = {
   defaultSignature: string | null;
   defaultFromName: string | null;
   defaultFromEmail: string | null;
+  bookingPageTitle: string | null;
+  bookingPageSubtitle: string | null;
+  bookingPageHeader: string | null;
+  bookingPageDescription: string | null;
+  businessHours: string | null;
+  showInfoCards: boolean | null;
+  bookingPageBgColor: string | null;
 } | null;
 
 export function SettingsForm({ profile }: { profile: CompanyProfile }) {
@@ -46,6 +53,13 @@ export function SettingsForm({ profile }: { profile: CompanyProfile }) {
     defaultSignature: profile?.defaultSignature || "",
     defaultFromName: profile?.defaultFromName || "",
     defaultFromEmail: profile?.defaultFromEmail || "",
+    bookingPageTitle: profile?.bookingPageTitle || "Schedule an Appointment",
+    bookingPageSubtitle: profile?.bookingPageSubtitle || "Book a convenient time for your visit",
+    bookingPageHeader: profile?.bookingPageHeader || "Request an Appointment",
+    bookingPageDescription: profile?.bookingPageDescription || "Fill out the form below and we'll get back to you to confirm your appointment",
+    businessHours: profile?.businessHours || "Monday - Friday, 9:00 AM - 5:00 PM",
+    showInfoCards: profile?.showInfoCards ?? true,
+    bookingPageBgColor: profile?.bookingPageBgColor || "from-blue-50 to-violet-50",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -393,6 +407,103 @@ export function SettingsForm({ profile }: { profile: CompanyProfile }) {
             placeholder="Best regards,&#10;John Doe&#10;CEO, Acme Inc."
             rows={4}
           />
+        </div>
+      </div>
+
+      {/* Booking Page Customization */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-muted-foreground">
+          Booking Page Customization
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          Customize how your public booking page looks to customers
+        </p>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="bookingPageTitle">Page Title</Label>
+            <Input
+              id="bookingPageTitle"
+              name="bookingPageTitle"
+              value={formData.bookingPageTitle}
+              onChange={handleChange}
+              placeholder="Schedule an Appointment"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bookingPageSubtitle">Page Subtitle</Label>
+            <Input
+              id="bookingPageSubtitle"
+              name="bookingPageSubtitle"
+              value={formData.bookingPageSubtitle}
+              onChange={handleChange}
+              placeholder="Book a convenient time for your visit"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="bookingPageHeader">Form Header</Label>
+            <Input
+              id="bookingPageHeader"
+              name="bookingPageHeader"
+              value={formData.bookingPageHeader}
+              onChange={handleChange}
+              placeholder="Request an Appointment"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="businessHours">Business Hours</Label>
+            <Input
+              id="businessHours"
+              name="businessHours"
+              value={formData.businessHours}
+              onChange={handleChange}
+              placeholder="Monday - Friday, 9:00 AM - 5:00 PM"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="bookingPageDescription">Form Description</Label>
+          <Textarea
+            id="bookingPageDescription"
+            name="bookingPageDescription"
+            value={formData.bookingPageDescription}
+            onChange={handleChange}
+            placeholder="Fill out the form below and we'll get back to you to confirm your appointment"
+            rows={2}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="bookingPageBgColor">Background Gradient</Label>
+          <Input
+            id="bookingPageBgColor"
+            name="bookingPageBgColor"
+            value={formData.bookingPageBgColor}
+            onChange={handleChange}
+            placeholder="from-blue-50 to-violet-50"
+          />
+          <p className="text-xs text-muted-foreground">
+            Use Tailwind gradient classes (e.g., from-blue-50 to-violet-50)
+          </p>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="showInfoCards"
+            checked={formData.showInfoCards}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, showInfoCards: e.target.checked }))
+            }
+            className="h-4 w-4 rounded border-gray-300"
+          />
+          <Label htmlFor="showInfoCards" className="cursor-pointer">
+            Show info cards (Flexible Scheduling, Quick Response, Easy Process)
+          </Label>
         </div>
       </div>
 
