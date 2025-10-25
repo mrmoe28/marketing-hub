@@ -8,22 +8,32 @@ export default async function PublicBookingPage() {
   const profile = await db.companyProfile.findFirst();
   const companyName = profile?.companyName || "Our Company";
 
+  // Booking page settings with defaults
+  const pageTitle = profile?.bookingPageTitle || "Schedule an Appointment";
+  const pageSubtitle = profile?.bookingPageSubtitle || `Book a convenient time for your visit with ${companyName}`;
+  const formHeader = profile?.bookingPageHeader || "Request an Appointment";
+  const formDescription = profile?.bookingPageDescription || "Fill out the form below and we'll get back to you to confirm your appointment";
+  const businessHours = profile?.businessHours || "Monday - Friday, 9:00 AM - 5:00 PM";
+  const showInfoCards = profile?.showInfoCards ?? true;
+  const bgGradient = profile?.bookingPageBgColor || "from-blue-50 to-violet-50";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-violet-50 dark:from-gray-900 dark:to-gray-800">
+    <div className={`min-h-screen bg-gradient-to-br ${bgGradient} dark:from-gray-900 dark:to-gray-800`}>
       <div className="container mx-auto px-4 py-12">
         <div className="mx-auto max-w-4xl">
           {/* Header */}
           <div className="mb-8 text-center">
             <h1 className="mb-4 text-4xl font-bold tracking-tight">
-              Schedule an Appointment
+              {pageTitle}
             </h1>
             <p className="text-lg text-muted-foreground">
-              Book a convenient time for your visit with {companyName}
+              {pageSubtitle}
             </p>
           </div>
 
           {/* Info Cards */}
-          <div className="mb-8 grid gap-4 md:grid-cols-3">
+          {showInfoCards && (
+            <div className="mb-8 grid gap-4 md:grid-cols-3">
             <div className="rounded-lg border bg-white p-6 shadow-sm dark:bg-gray-800">
               <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900">
                 <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -53,14 +63,15 @@ export default async function PublicBookingPage() {
                 Simple form, no account required
               </p>
             </div>
-          </div>
+            </div>
+          )}
 
           {/* Booking Form */}
           <div className="rounded-lg border bg-white shadow-lg dark:bg-gray-800">
             <div className="border-b p-6">
-              <h2 className="text-2xl font-semibold">Request an Appointment</h2>
+              <h2 className="text-2xl font-semibold">{formHeader}</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Fill out the form below and we'll get back to you to confirm your appointment
+                {formDescription}
               </p>
             </div>
             <div className="p-6">
@@ -70,7 +81,7 @@ export default async function PublicBookingPage() {
 
           {/* Footer Info */}
           <div className="mt-8 text-center text-sm text-muted-foreground">
-            <p>Business Hours: Monday - Friday, 9:00 AM - 5:00 PM</p>
+            <p>Business Hours: {businessHours}</p>
             {profile?.contactPhone && (
               <p className="mt-1">
                 Questions? Call us at {profile.contactPhone}
