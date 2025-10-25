@@ -8,7 +8,6 @@ import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
 import ResizableImage from "tiptap-extension-resize-image";
 import Video from "tiptap-extension-video";
-import Resizable from "tiptap-extension-resizable";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +50,7 @@ export function RichTextEditor({
         heading: {
           levels: [1, 2, 3],
         },
+        link: false, // Disable default Link to use custom configuration
       }),
       Link.configure({
         openOnClick: false,
@@ -75,20 +75,6 @@ export function RichTextEditor({
         HTMLAttributes: {
           class: "rounded-lg cursor-pointer",
           controls: true,
-        },
-      }),
-      Resizable.configure({
-        types: ["image", "video"],
-        handlerStyle: {
-          width: "10px",
-          height: "10px",
-          background: "#4F46E5",
-          border: "2px solid white",
-          borderRadius: "50%",
-        },
-        layerStyle: {
-          outline: "3px solid #4F46E5",
-          outlineOffset: "2px",
         },
       }),
     ],
