@@ -38,6 +38,12 @@ export function RichTextEditor({
   const [linkUrl, setLinkUrl] = useState("");
   const [showAltInput, setShowAltInput] = useState(false);
   const [altText, setAltText] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Ensure BubbleMenu only renders on client
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -190,7 +196,7 @@ export function RichTextEditor({
   return (
     <div className="border rounded-lg shadow-lg overflow-hidden bg-white">
       {/* Bubble Menu for Images/Videos */}
-      {editor && (
+      {isMounted && editor && (
         <BubbleMenu
           editor={editor}
           shouldShow={({ editor, state }) => {
@@ -243,7 +249,7 @@ export function RichTextEditor({
             </Button>
 
             {/* Alt Text Button (Images only) */}
-            {editor.state.selection.$from.node()?.type.name === "image" && (
+            {editor?.state?.selection?.$from?.node()?.type?.name === "image" && (
               <Button
                 size="sm"
                 variant="ghost"
