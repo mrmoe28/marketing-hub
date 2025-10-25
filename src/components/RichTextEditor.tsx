@@ -7,7 +7,7 @@ import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
 import TextAlign from "@tiptap/extension-text-align";
 import ResizableImage from "tiptap-extension-resize-image";
-import Video from "tiptap-extension-video";
+import { ResizableVideo } from "@/lib/tiptap-extensions/resizable-video";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,7 +71,9 @@ export function RichTextEditor({
           class: "rounded-lg cursor-pointer",
         },
       }),
-      Video.configure({
+      ResizableVideo.configure({
+        inline: false,
+        allowBase64: true,
         HTMLAttributes: {
           class: "rounded-lg cursor-pointer",
           controls: true,
