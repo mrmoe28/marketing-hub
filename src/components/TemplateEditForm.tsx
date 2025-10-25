@@ -218,7 +218,7 @@ export function TemplateEditForm({ template }: { template: Template }) {
 
     setIsAIProcessing(true);
     try {
-      const response = await fetch("/api/ai/write", {
+      const response = await fetch("/api/ai/assist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -227,7 +227,10 @@ export function TemplateEditForm({ template }: { template: Template }) {
         }),
       });
 
-      if (!response.ok) throw new Error("AI request failed");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "AI request failed");
+      }
 
       const data = await response.json();
       const htmlResult = data.result || formData.bodyHtml;
