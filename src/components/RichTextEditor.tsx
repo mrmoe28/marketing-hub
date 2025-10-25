@@ -129,64 +129,84 @@ export function RichTextEditor({
 
   // Handle image alignment
   const setAlignment = (align: "left" | "center" | "right") => {
-    if (!editor) return;
-    const { state } = editor;
-    const { selection } = state;
-    const node = selection.$from.node();
+    try {
+      if (!editor?.state?.selection?.$from) return;
+      const { state } = editor;
+      const { selection } = state;
+      const node = selection.$from.node();
 
-    if (node?.type.name === "image" || node?.type.name === "video") {
-      editor
-        .chain()
-        .focus()
-        .updateAttributes(node.type.name, {
-          style: `display: block; margin-${align === "center" ? "left: auto; margin-right: auto" : align === "right" ? "left: auto; margin-right: 0" : "left: 0; margin-right: auto"}`,
-        })
-        .run();
+      if (node?.type?.name === "image" || node?.type?.name === "video") {
+        const marginStyle = align === "center"
+          ? "left: auto; margin-right: auto"
+          : align === "right"
+          ? "left: auto; margin-right: 0"
+          : "left: 0; margin-right: auto";
+
+        editor
+          .chain()
+          .focus()
+          .updateAttributes(node.type.name, {
+            style: `display: block; margin-${marginStyle}`,
+          })
+          .run();
+      }
+    } catch (error) {
+      console.error("Error setting alignment:", error);
     }
   };
 
   // Handle adding link to image
   const handleAddLink = () => {
-    if (!linkUrl) return;
-    if (!editor) return;
+    try {
+      if (!linkUrl || !editor?.state?.selection?.$from) return;
 
-    const { state } = editor;
-    const { selection } = state;
-    const node = selection.$from.node();
+      const { state } = editor;
+      const { selection } = state;
+      const node = selection.$from.node();
 
-    if (node?.type.name === "image" || node?.type.name === "video") {
-      // Wrap the media in a link
-      const mediaHtml = `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${state.doc.textContent}</a>`;
-      editor.chain().focus().insertContent(mediaHtml).run();
-      setShowLinkInput(false);
-      setLinkUrl("");
+      if (node?.type?.name === "image" || node?.type?.name === "video") {
+        // Wrap the media in a link
+        const mediaHtml = `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${state.doc.textContent}</a>`;
+        editor.chain().focus().insertContent(mediaHtml).run();
+        setShowLinkInput(false);
+        setLinkUrl("");
+      }
+    } catch (error) {
+      console.error("Error adding link:", error);
     }
   };
 
   // Handle adding alt text
   const handleAddAltText = () => {
-    if (!altText) return;
-    if (!editor) return;
+    try {
+      if (!altText || !editor?.state?.selection?.$from) return;
 
-    const { state } = editor;
-    const { selection } = state;
-    const node = selection.$from.node();
+      const { state } = editor;
+      const { selection } = state;
+      const node = selection.$from.node();
 
-    if (node?.type.name === "image") {
-      editor
-        .chain()
-        .focus()
-        .updateAttributes("image", { alt: altText })
-        .run();
-      setShowAltInput(false);
-      setAltText("");
+      if (node?.type?.name === "image") {
+        editor
+          .chain()
+          .focus()
+          .updateAttributes("image", { alt: altText })
+          .run();
+        setShowAltInput(false);
+        setAltText("");
+      }
+    } catch (error) {
+      console.error("Error adding alt text:", error);
     }
   };
 
   // Handle deleting media
   const handleDelete = () => {
-    if (!editor) return;
-    editor.chain().focus().deleteSelection().run();
+    try {
+      if (!editor) return;
+      editor.chain().focus().deleteSelection().run();
+    } catch (error) {
+      console.error("Error deleting media:", error);
+    }
   };
 
   if (!editor) {
@@ -200,9 +220,13 @@ export function RichTextEditor({
         <BubbleMenu
           editor={editor}
           shouldShow={({ editor, state }) => {
-            const { selection } = state;
-            const node = selection.$from.node();
-            return node?.type.name === "image" || node?.type.name === "video";
+            try {
+              if (!state?.selection?.$from) return false;
+              const node = state.selection.$from.node();
+              return node?.type?.name === "image" || node?.type?.name === "video";
+            } catch (error) {
+              return false;
+            }
           }}
         >
           <div className="flex items-center gap-1 bg-gray-900 text-white rounded-lg p-2 shadow-lg">
