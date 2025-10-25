@@ -82,11 +82,14 @@ Return JSON with this structure:
 
   const humanizedBody = humanizeEmail(parsed.body);
 
+  // Add signature to plain text
+  const bodyWithSignature = humanizedBody + "\n\n---\nEKO SOLAR.LLC\nVisit our website: www.ekosolarpros.com";
+
   const bodyHtml = convertTextToHtml(humanizedBody);
 
   return {
     subject: parsed.subject,
-    bodyText: humanizedBody,
+    bodyText: bodyWithSignature,
     bodyHtml,
   };
 }
@@ -96,6 +99,15 @@ function convertTextToHtml(text: string): string {
     .split("\n\n")
     .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
     .join("");
+
+  // Add signature with website link
+  const signature = `
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5;">
+      <p style="margin: 0; font-size: 14px; color: #666;">
+        EKO SOLAR.LLC<br>
+        <a href="https://www.ekosolarpros.com" style="color: #0066cc; text-decoration: underline;">Visit our website</a>
+      </p>
+    </div>`;
 
   return `<!DOCTYPE html>
 <html>
@@ -110,6 +122,7 @@ a { color: #0066cc; }
 </head>
 <body>
 ${paragraphs}
+${signature}
 </body>
 </html>`;
 }

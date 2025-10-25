@@ -82,7 +82,19 @@ export function EmailEditor({ onEmailChange }: EmailEditorProps) {
   }
 
   const handleManualUpdate = () => {
-    onEmailChange({ subject, html: bodyHtml, text: bodyText });
+    // Add signature to plain text email
+    const textWithSignature = bodyText ? bodyText + "\n\n---\nEKO SOLAR.LLC\nVisit our website: www.ekosolarpros.com" : "";
+    
+    // Convert text to HTML and add signature
+    const htmlWithSignature = bodyText ? 
+      `${bodyText.replace(/\n/g, '<br>')}<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5;"><p style="margin: 0; font-size: 14px; color: #666;">EKO SOLAR.LLC<br><a href="https://www.ekosolarpros.com" style="color: #0066cc; text-decoration: underline;">Visit our website</a></p></div>` 
+      : "";
+    
+    onEmailChange({ 
+      subject, 
+      html: bodyHtml || htmlWithSignature, 
+      text: textWithSignature 
+    });
   };
 
   return (

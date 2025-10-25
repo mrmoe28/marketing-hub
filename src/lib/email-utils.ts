@@ -34,6 +34,12 @@ export function wrapInEmailTemplate(htmlContent: string): string {
     <body style="margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif;">
       <div style="max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #333;">
         ${htmlContent}
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5;">
+          <p style="margin: 0; font-size: 14px; color: #666;">
+            EKO SOLAR.LLC<br>
+            <a href="https://www.ekosolarpros.com" style="color: #0066cc; text-decoration: underline;">Visit our website</a>
+          </p>
+        </div>
       </div>
     </body>
     </html>
