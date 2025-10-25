@@ -4,6 +4,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
+import Image from "@tiptap/extension-image";
 import { useEffect } from "react";
 
 interface RichTextEditorProps {
@@ -34,6 +35,13 @@ export function RichTextEditor({
       }),
       Placeholder.configure({
         placeholder,
+      }),
+      Image.configure({
+        inline: true,
+        allowBase64: true,
+        HTMLAttributes: {
+          class: "max-w-full h-auto rounded-lg",
+        },
       }),
     ],
     content,
