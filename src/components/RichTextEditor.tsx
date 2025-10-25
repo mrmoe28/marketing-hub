@@ -4,7 +4,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Placeholder from "@tiptap/extension-placeholder";
-import Image from "@tiptap/extension-image";
+import ResizableImage from "tiptap-extension-resize-image";
 import { useEffect } from "react";
 
 interface RichTextEditorProps {
@@ -36,11 +36,11 @@ export function RichTextEditor({
       Placeholder.configure({
         placeholder,
       }),
-      Image.configure({
-        inline: true,
+      ResizableImage.configure({
+        inline: false,
         allowBase64: true,
         HTMLAttributes: {
-          class: "max-w-full h-auto rounded-lg",
+          class: "rounded-lg cursor-pointer",
         },
       }),
     ],
@@ -72,6 +72,30 @@ export function RichTextEditor({
 
   return (
     <div className="border rounded-lg shadow-lg overflow-hidden bg-white">
+      <style jsx global>{`
+        .ProseMirror img {
+          max-width: 100%;
+          height: auto;
+          cursor: pointer;
+        }
+
+        .ProseMirror img.ProseMirror-selectednode {
+          outline: 3px solid #4F46E5;
+          outline-offset: 2px;
+        }
+
+        /* Resize handle styles */
+        .resize-trigger {
+          position: absolute;
+          width: 10px;
+          height: 10px;
+          background: #4F46E5;
+          border: 2px solid white;
+          border-radius: 50%;
+          cursor: nwse-resize;
+          z-index: 10;
+        }
+      `}</style>
       <EditorContent editor={editor} />
     </div>
   );
