@@ -18,12 +18,25 @@ export function EmailEditor({ onEmailChange }: EmailEditorProps) {
   const [bodyText, setBodyText] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const { toast } = useToast();
 
   const [brand, setBrand] = useState("");
   const [audience, setAudience] = useState("");
   const [goal, setGoal] = useState("");
   const [details, setDetails] = useState("");
+
+  // Fetch company logo on mount
+  useEffect(() => {
+    fetch("/api/profile")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.companyLogo) {
+          setCompanyLogo(data.companyLogo);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   async function handleAIWrite() {
     if (!brand || !audience || !goal || !details) {
@@ -84,7 +97,10 @@ export function EmailEditor({ onEmailChange }: EmailEditorProps) {
   const handleManualUpdate = () => {
     // Always add signature to emails
     const signature = "\n\n---\nEKO SOLAR.LLC\nVisit our website: www.ekosolarpros.com";
-    const htmlSignature = `<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5;"><p style="margin: 0; font-size: 14px; color: #666;">EKO SOLAR.LLC<br><a href="https://www.ekosolarpros.com" style="color: #0066cc; text-decoration: underline;">Visit our website</a></p></div>`;
+    const logoHtml = companyLogo ? 
+      `<img src="${companyLogo.startsWith('http') ? companyLogo : `${window.location.origin}${companyLogo}`}" alt="EKO SOLAR.LLC" style="max-width: 150px; height: auto; margin-bottom: 10px; display: block;">` 
+      : '';
+    const htmlSignature = `<div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5;">${logoHtml}<p style="margin: 0; font-size: 14px; color: #666;">EKO SOLAR.LLC<br><a href="https://www.ekosolarpros.com" style="color: #0066cc; text-decoration: underline;">Visit our website</a></p></div>`;
     
     // For text version, check if signature already exists before adding
     let textWithSignature = bodyText || "";

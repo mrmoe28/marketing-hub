@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { claudeWriteEmail } from "@/lib/ai";
+import { db } from "@/lib/db";
 
 const WriteEmailSchema = z.object({
   brand: z.string().min(1),
@@ -16,7 +17,14 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = WriteEmailSchema.parse(body);
 
-    const result = await claudeWriteEmail(validated);
+    // Fetch company profile for logo and website
+    const profile = await db.companyProfile.findFirst();
+
+    const result = await claudeWriteEmail({
+      ...validated,
+      companyLogo: profile?.companyLogo || null,
+      companyWebsite: profile?.companyWebsite || "www.ekosolarpros.com"
+    });
 
     return NextResponse.json(result);
   } catch (error) {

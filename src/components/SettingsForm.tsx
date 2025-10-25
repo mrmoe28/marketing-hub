@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, Upload, Image } from "lucide-react";
 
 type CompanyProfile = {
   id: string;
@@ -29,6 +29,8 @@ type CompanyProfile = {
 export function SettingsForm({ profile }: { profile: CompanyProfile }) {
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     companyName: profile?.companyName || "",
     companyLogo: profile?.companyLogo || "",
@@ -80,6 +82,47 @@ export function SettingsForm({ profile }: { profile: CompanyProfile }) {
     }));
   };
 
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size must be less than 5MB");
+      return;
+    }
+
+    setLogoUploading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/upload/logo", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Upload failed");
+
+      const data = await response.json();
+      setFormData((prev) => ({ ...prev, companyLogo: data.url }));
+      
+      alert("Logo uploaded successfully!");
+    } catch (error) {
+      console.error("Logo upload error:", error);
+      alert("Failed to upload logo. Please try again.");
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Company Information */}
@@ -127,15 +170,57 @@ export function SettingsForm({ profile }: { profile: CompanyProfile }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="companyLogo">Logo URL</Label>
-            <Input
-              id="companyLogo"
-              name="companyLogo"
-              value={formData.companyLogo}
-              onChange={handleChange}
-              placeholder="https://example.com/logo.png"
-              type="url"
-            />
+            <Label htmlFor="companyLogo">Company Logo</Label>
+            <div className="space-y-2">
+              {formData.companyLogo && (
+                <div className="relative w-32 h-32 border rounded-lg overflow-hidden">
+                  <img
+                    src={formData.companyLogo}
+                    alt="Company Logo"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleLogoUpload}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={logoUploading}
+                >
+                  {logoUploading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Logo
+                    </>
+                  )}
+                </Button>
+                <Input
+                  id="companyLogo"
+                  name="companyLogo"
+                  value={formData.companyLogo}
+                  onChange={handleChange}
+                  placeholder="Or enter logo URL"
+                  type="url"
+                  className="flex-1"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Upload an image file (max 5MB) or provide a URL
+              </p>
+            </div>
           </div>
         </div>
 

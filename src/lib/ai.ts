@@ -18,6 +18,8 @@ export interface EmailWriteParams {
   details: string;
   draft?: string;
   stylePreset?: "friendly" | "professional" | "casual";
+  companyLogo?: string | null;
+  companyWebsite?: string;
 }
 
 export interface EmailWriteResult {
@@ -83,9 +85,10 @@ Return JSON with this structure:
   const humanizedBody = humanizeEmail(parsed.body);
 
   // Add signature to plain text
-  const bodyWithSignature = humanizedBody + "\n\n---\nEKO SOLAR.LLC\nVisit our website: www.ekosolarpros.com";
+  const websiteUrl = params.companyWebsite || "www.ekosolarpros.com";
+  const bodyWithSignature = humanizedBody + `\n\n---\nEKO SOLAR.LLC\nVisit our website: ${websiteUrl}`;
 
-  const bodyHtml = convertTextToHtml(humanizedBody);
+  const bodyHtml = convertTextToHtml(humanizedBody, params.companyLogo, websiteUrl);
 
   return {
     subject: parsed.subject,
@@ -94,18 +97,23 @@ Return JSON with this structure:
   };
 }
 
-function convertTextToHtml(text: string): string {
+function convertTextToHtml(text: string, logoUrl?: string | null, websiteUrl: string = "www.ekosolarpros.com"): string {
   const paragraphs = text
     .split("\n\n")
     .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
     .join("");
 
-  // Add signature with website link
+  // Add signature with logo and website link
+  const logoHtml = logoUrl ? 
+    `<img src="${logoUrl.startsWith('http') ? logoUrl : `https://${websiteUrl}${logoUrl}`}" alt="EKO SOLAR.LLC" style="max-width: 150px; height: auto; margin-bottom: 10px;">` 
+    : '';
+    
   const signature = `
     <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5;">
+      ${logoHtml}
       <p style="margin: 0; font-size: 14px; color: #666;">
         EKO SOLAR.LLC<br>
-        <a href="https://www.ekosolarpros.com" style="color: #0066cc; text-decoration: underline;">Visit our website</a>
+        <a href="https://${websiteUrl}" style="color: #0066cc; text-decoration: underline;">Visit our website</a>
       </p>
     </div>`;
 

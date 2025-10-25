@@ -23,7 +23,7 @@ export function convertTextToHtml(text: string): string {
 /**
  * Wrap text in a basic email HTML template
  */
-export function wrapInEmailTemplate(htmlContent: string): string {
+export function wrapInEmailTemplate(htmlContent: string, logoUrl?: string | null): string {
   return `
     <!DOCTYPE html>
     <html>
@@ -35,6 +35,7 @@ export function wrapInEmailTemplate(htmlContent: string): string {
       <div style="max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6; color: #333;">
         ${htmlContent}
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5;">
+          ${logoUrl ? `<img src="${logoUrl.startsWith('http') ? logoUrl : `https://www.ekosolarpros.com${logoUrl}`}" alt="EKO SOLAR.LLC" style="max-width: 150px; height: auto; margin-bottom: 10px; display: block;">` : ''}
           <p style="margin: 0; font-size: 14px; color: #666;">
             EKO SOLAR.LLC<br>
             <a href="https://www.ekosolarpros.com" style="color: #0066cc; text-decoration: underline;">Visit our website</a>

@@ -20,9 +20,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = CreateCampaignSchema.parse(body);
 
+    // Fetch company profile for logo
+    const profile = await db.companyProfile.findFirst();
+
     // Convert bodyText to HTML with clickable links if bodyHtml not provided
     const bodyText = validated.bodyText || "Draft email...";
-    const bodyHtml = validated.bodyHtml || wrapInEmailTemplate(convertTextToHtml(bodyText));
+    const bodyHtml = validated.bodyHtml || wrapInEmailTemplate(convertTextToHtml(bodyText), profile?.companyLogo);
 
     const campaign = await db.campaign.create({
       data: {
