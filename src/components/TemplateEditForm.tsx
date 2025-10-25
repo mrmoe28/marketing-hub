@@ -168,27 +168,25 @@ export function TemplateEditForm({ template }: { template: Template }) {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
+      // Check file size before upload (5MB limit for images)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        alert("Image file is too large. Maximum size is 5MB.");
+        return;
+      }
+
       setIsAIProcessing(true);
       try {
-        // Upload image to server
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const response = await fetch("/api/images/upload", {
-          method: "POST",
-          body: formData,
+        // Use Vercel Blob client-side upload
+        const { upload } = await import('@vercel/blob/client');
+        const blob = await upload(file.name, file, {
+          access: 'public',
+          handleUploadUrl: '/api/images/upload',
         });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Upload failed");
-        }
-
-        const data = await response.json();
 
         // Insert image into editor
         if (editor) {
-          editor.chain().focus().setImage({ src: data.url }).run();
+          editor.chain().focus().setImage({ src: blob.url }).run();
         }
       } catch (error) {
         console.error("Error uploading image:", error);
@@ -208,27 +206,25 @@ export function TemplateEditForm({ template }: { template: Template }) {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
+      // Check file size before upload (50MB limit)
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) {
+        alert("Video file is too large. Maximum size is 50MB.");
+        return;
+      }
+
       setIsAIProcessing(true);
       try {
-        // Upload video to server
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const response = await fetch("/api/images/upload", {
-          method: "POST",
-          body: formData,
+        // Use Vercel Blob client-side upload (bypasses API route body size limits)
+        const { upload } = await import('@vercel/blob/client');
+        const blob = await upload(file.name, file, {
+          access: 'public',
+          handleUploadUrl: '/api/images/upload',
         });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || "Upload failed");
-        }
-
-        const data = await response.json();
 
         // Insert video into editor
         if (editor) {
-          editor.chain().focus().setVideo({ src: data.url }).run();
+          editor.chain().focus().setVideo({ src: blob.url }).run();
         }
       } catch (error) {
         console.error("Error uploading video:", error);
