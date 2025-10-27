@@ -73,9 +73,12 @@ export function ClientTable({ clients, visibleColumns = {} }: ClientTableProps) 
   }
 
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const floatingScrollRef = useRef<HTMLDivElement>(null);
+  const floatingScrollContentRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  const [showFloatingScroll, setShowFloatingScroll] = useState(false);
 
   // Click and drag to scroll functionality
   useEffect(() => {
@@ -117,14 +120,64 @@ export function ClientTable({ clients, visibleColumns = {} }: ClientTableProps) 
     };
   }, [isDragging, startX, scrollLeft]);
 
+  // Floating scrollbar sync
+  useEffect(() => {
+    const tableContainer = tableContainerRef.current;
+    const floatingScroll = floatingScrollRef.current;
+    const floatingScrollContent = floatingScrollContentRef.current;
+
+    if (!tableContainer || !floatingScroll || !floatingScrollContent) return;
+
+    // Check if horizontal scrolling is needed
+    const checkScrollNeeded = () => {
+      const needsScroll = tableContainer.scrollWidth > tableContainer.clientWidth;
+      setShowFloatingScroll(needsScroll);
+
+      if (needsScroll) {
+        // Match the width of the floating scroll content to the table's scroll width
+        floatingScrollContent.style.width = `${tableContainer.scrollWidth}px`;
+      }
+    };
+
+    // Sync scroll positions
+    const syncFromTable = () => {
+      floatingScroll.scrollLeft = tableContainer.scrollLeft;
+    };
+
+    const syncFromFloating = () => {
+      tableContainer.scrollLeft = floatingScroll.scrollLeft;
+    };
+
+    // Initial check
+    checkScrollNeeded();
+
+    // Listen to scroll events
+    tableContainer.addEventListener('scroll', syncFromTable);
+    floatingScroll.addEventListener('scroll', syncFromFloating);
+
+    // Recheck on window resize
+    window.addEventListener('resize', checkScrollNeeded);
+
+    // Recheck when content changes (using MutationObserver)
+    const observer = new MutationObserver(checkScrollNeeded);
+    observer.observe(tableContainer, { childList: true, subtree: true });
+
+    return () => {
+      tableContainer.removeEventListener('scroll', syncFromTable);
+      floatingScroll.removeEventListener('scroll', syncFromFloating);
+      window.removeEventListener('resize', checkScrollNeeded);
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <div className="relative">
       {/* Scroll hint */}
       {customFieldNames.length > 0 && (
         <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
           <span>Scroll right to see all {5 + customFieldNames.length} columns →</span>
-          <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 font-medium">
-            Use scrollbar below or click & drag table
+          <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 border border-primary/20 px-2 py-1 font-medium text-primary">
+            🔵 Look at the bottom of your screen for the blue scrollbar
           </span>
         </div>
       )}
@@ -275,6 +328,46 @@ export function ClientTable({ clients, visibleColumns = {} }: ClientTableProps) 
           </TableBody>
         </Table>
       </div>
+
+      {/* Floating Sticky Scrollbar */}
+      {showFloatingScroll && (
+        <div
+          ref={floatingScrollRef}
+          className="fixed bottom-0 left-0 right-0 z-50 overflow-x-auto bg-background/95 backdrop-blur-sm border-t-2 border-primary shadow-lg"
+          style={{
+            height: '24px',
+            scrollbarWidth: 'auto',
+            scrollbarColor: 'hsl(var(--primary)) hsl(var(--muted))',
+          }}
+        >
+          <div
+            ref={floatingScrollContentRef}
+            style={{ height: '1px' }}
+          />
+          <style jsx>{`
+            div::-webkit-scrollbar {
+              height: 20px;
+            }
+            div::-webkit-scrollbar-track {
+              background: hsl(var(--muted));
+            }
+            div::-webkit-scrollbar-thumb {
+              background: hsl(var(--primary));
+              border-radius: 10px;
+              border: 3px solid hsl(var(--muted));
+              min-width: 100px;
+            }
+            div::-webkit-scrollbar-thumb:hover {
+              background: hsl(var(--primary) / 0.8);
+              cursor: grab;
+            }
+            div::-webkit-scrollbar-thumb:active {
+              background: hsl(var(--primary) / 0.9);
+              cursor: grabbing;
+            }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 }
