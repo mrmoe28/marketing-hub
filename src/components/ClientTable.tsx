@@ -133,10 +133,8 @@ export function ClientTable({ clients, visibleColumns = {} }: ClientTableProps) 
       const needsScroll = tableContainer.scrollWidth > tableContainer.clientWidth;
       setShowFloatingScroll(needsScroll);
 
-      if (needsScroll) {
-        // Match the width of the floating scroll content to the table's scroll width
-        floatingScrollContent.style.width = `${tableContainer.scrollWidth}px`;
-      }
+      // Always set the width to match table scroll width
+      floatingScrollContent.style.width = `${tableContainer.scrollWidth}px`;
     };
 
     // Sync scroll positions
@@ -148,8 +146,10 @@ export function ClientTable({ clients, visibleColumns = {} }: ClientTableProps) 
       tableContainer.scrollLeft = floatingScroll.scrollLeft;
     };
 
-    // Initial check
-    checkScrollNeeded();
+    // Initial check with delay to ensure table is fully rendered
+    const initialCheck = setTimeout(() => {
+      checkScrollNeeded();
+    }, 100);
 
     // Listen to scroll events
     tableContainer.addEventListener('scroll', syncFromTable);
@@ -163,6 +163,7 @@ export function ClientTable({ clients, visibleColumns = {} }: ClientTableProps) 
     observer.observe(tableContainer, { childList: true, subtree: true });
 
     return () => {
+      clearTimeout(initialCheck);
       tableContainer.removeEventListener('scroll', syncFromTable);
       floatingScroll.removeEventListener('scroll', syncFromFloating);
       window.removeEventListener('resize', checkScrollNeeded);
@@ -329,45 +330,45 @@ export function ClientTable({ clients, visibleColumns = {} }: ClientTableProps) 
         </Table>
       </div>
 
-      {/* Floating Sticky Scrollbar */}
-      {showFloatingScroll && (
+      {/* Floating Sticky Scrollbar - Always rendered, visibility controlled by CSS */}
+      <div
+        ref={floatingScrollRef}
+        className="fixed bottom-0 left-0 right-0 z-50 overflow-x-auto bg-background/95 backdrop-blur-sm border-t-2 border-primary shadow-lg transition-opacity duration-200"
+        style={{
+          height: '24px',
+          scrollbarWidth: 'auto',
+          scrollbarColor: 'hsl(var(--primary)) hsl(var(--muted))',
+          opacity: showFloatingScroll ? 1 : 0,
+          pointerEvents: showFloatingScroll ? 'auto' : 'none',
+        }}
+      >
         <div
-          ref={floatingScrollRef}
-          className="fixed bottom-0 left-0 right-0 z-50 overflow-x-auto bg-background/95 backdrop-blur-sm border-t-2 border-primary shadow-lg"
-          style={{
-            height: '24px',
-            scrollbarWidth: 'auto',
-            scrollbarColor: 'hsl(var(--primary)) hsl(var(--muted))',
-          }}
-        >
-          <div
-            ref={floatingScrollContentRef}
-            style={{ height: '1px' }}
-          />
-          <style jsx>{`
-            div::-webkit-scrollbar {
-              height: 20px;
-            }
-            div::-webkit-scrollbar-track {
-              background: hsl(var(--muted));
-            }
-            div::-webkit-scrollbar-thumb {
-              background: hsl(var(--primary));
-              border-radius: 10px;
-              border: 3px solid hsl(var(--muted));
-              min-width: 100px;
-            }
-            div::-webkit-scrollbar-thumb:hover {
-              background: hsl(var(--primary) / 0.8);
-              cursor: grab;
-            }
-            div::-webkit-scrollbar-thumb:active {
-              background: hsl(var(--primary) / 0.9);
-              cursor: grabbing;
-            }
-          `}</style>
-        </div>
-      )}
+          ref={floatingScrollContentRef}
+          style={{ height: '1px' }}
+        />
+        <style jsx>{`
+          div::-webkit-scrollbar {
+            height: 20px;
+          }
+          div::-webkit-scrollbar-track {
+            background: hsl(var(--muted));
+          }
+          div::-webkit-scrollbar-thumb {
+            background: hsl(var(--primary));
+            border-radius: 10px;
+            border: 3px solid hsl(var(--muted));
+            min-width: 100px;
+          }
+          div::-webkit-scrollbar-thumb:hover {
+            background: hsl(var(--primary) / 0.8);
+            cursor: grab;
+          }
+          div::-webkit-scrollbar-thumb:active {
+            background: hsl(var(--primary) / 0.9);
+            cursor: grabbing;
+          }
+        `}</style>
+      </div>
     </div>
   );
 }
