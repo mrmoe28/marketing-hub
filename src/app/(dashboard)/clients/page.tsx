@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { ClientTable } from "@/components/ClientTable";
+import { ClientTableWrapper } from "@/components/ClientTableWrapper";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Upload, Users, Sparkles } from "lucide-react";
@@ -78,13 +78,7 @@ export default async function ClientsPage() {
       </div>
 
       <div className="rounded-lg border bg-card shadow-lg">
-        <div className="border-b p-6">
-          <h2 className="text-lg font-semibold">All Clients ({clients.length})</h2>
-          <p className="text-sm text-muted-foreground">View and manage your imported clients</p>
-        </div>
-        <div className="p-6">
-          <ClientTable clients={clients} />
-        </div>
+        <ClientTableWrapper clients={clients} totalCount={clients.length} />
       </div>
     </div>
   );

@@ -21,6 +21,7 @@ type ClientWithTags = Client & {
 
 interface ClientTableProps {
   clients: ClientWithTags[];
+  visibleColumns?: Record<string, boolean>;
 }
 
 // Helper to format field names nicely
@@ -32,7 +33,7 @@ function formatFieldName(fieldName: string): string {
     .trim();
 }
 
-export function ClientTable({ clients }: ClientTableProps) {
+export function ClientTable({ clients, visibleColumns = {} }: ClientTableProps) {
   // Collect all unique custom field names across all clients
   const customFieldNames = useMemo(() => {
     const fieldNames = new Set<string>();
@@ -45,6 +46,11 @@ export function ClientTable({ clients }: ClientTableProps) {
     });
     return Array.from(fieldNames).sort();
   }, [clients]);
+
+  // Helper to check if column is visible
+  const isColumnVisible = (columnId: string) => {
+    return visibleColumns[columnId] !== false;
+  };
 
   if (clients.length === 0) {
     return (
@@ -146,17 +152,31 @@ export function ClientTable({ clients }: ClientTableProps) {
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="sticky left-0 z-10 bg-background min-w-[200px] shadow-md">Name</TableHead>
-              <TableHead className="min-w-[150px]">Phone</TableHead>
-              <TableHead className="min-w-[200px]">Address</TableHead>
-              <TableHead className="min-w-[200px]">Email</TableHead>
-              <TableHead className="min-w-[150px]">Company</TableHead>
-              <TableHead className="min-w-[150px]">Tags</TableHead>
+              {isColumnVisible("name") && (
+                <TableHead className="sticky left-0 z-10 bg-background min-w-[200px] shadow-md">Name</TableHead>
+              )}
+              {isColumnVisible("phone") && (
+                <TableHead className="min-w-[150px]">Phone</TableHead>
+              )}
+              {isColumnVisible("address") && (
+                <TableHead className="min-w-[200px]">Address</TableHead>
+              )}
+              {isColumnVisible("email") && (
+                <TableHead className="min-w-[200px]">Email</TableHead>
+              )}
+              {isColumnVisible("company") && (
+                <TableHead className="min-w-[150px]">Company</TableHead>
+              )}
+              {isColumnVisible("tags") && (
+                <TableHead className="min-w-[150px]">Tags</TableHead>
+              )}
               {/* Dynamic custom field columns */}
               {customFieldNames.map((fieldName) => (
-                <TableHead key={fieldName} className="min-w-[150px]">
-                  {formatFieldName(fieldName)}
-                </TableHead>
+                isColumnVisible(fieldName) && (
+                  <TableHead key={fieldName} className="min-w-[150px]">
+                    {formatFieldName(fieldName)}
+                  </TableHead>
+                )
               ))}
             </TableRow>
           </TableHeader>
@@ -173,55 +193,69 @@ export function ClientTable({ clients }: ClientTableProps) {
 
               return (
                 <TableRow key={client.id} className="group">
-                  <TableCell className="sticky left-0 z-10 bg-background group-hover:bg-accent shadow-md">
-                    <Link
-                      href={`/clients/${client.id}`}
-                      className="font-medium text-blue-600 hover:underline dark:text-blue-400"
-                    >
-                      {client.firstName || client.lastName
-                        ? `${client.firstName || ""} ${client.lastName || ""}`.trim()
-                        : <span className="text-muted-foreground">—</span>}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {client.phone || <span className="text-muted-foreground">—</span>}
-                  </TableCell>
-                  <TableCell>
-                    {fullAddress || <span className="text-muted-foreground">—</span>}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {client.email}
-                  </TableCell>
-                  <TableCell>
-                    {client.company || <span className="text-muted-foreground">—</span>}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {client.tags.length > 0 ? (
-                        client.tags.slice(0, 2).map((t) => (
-                          <Badge key={t.tagId} variant="secondary" className="text-xs">
-                            {t.tag.name}
+                  {isColumnVisible("name") && (
+                    <TableCell className="sticky left-0 z-10 bg-background group-hover:bg-accent shadow-md">
+                      <Link
+                        href={`/clients/${client.id}`}
+                        className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                      >
+                        {client.firstName || client.lastName
+                          ? `${client.firstName || ""} ${client.lastName || ""}`.trim()
+                          : <span className="text-muted-foreground">—</span>}
+                      </Link>
+                    </TableCell>
+                  )}
+                  {isColumnVisible("phone") && (
+                    <TableCell>
+                      {client.phone || <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                  )}
+                  {isColumnVisible("address") && (
+                    <TableCell>
+                      {fullAddress || <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                  )}
+                  {isColumnVisible("email") && (
+                    <TableCell className="font-medium">
+                      {client.email}
+                    </TableCell>
+                  )}
+                  {isColumnVisible("company") && (
+                    <TableCell>
+                      {client.company || <span className="text-muted-foreground">—</span>}
+                    </TableCell>
+                  )}
+                  {isColumnVisible("tags") && (
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {client.tags.length > 0 ? (
+                          client.tags.slice(0, 2).map((t) => (
+                            <Badge key={t.tagId} variant="secondary" className="text-xs">
+                              {t.tag.name}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                        {client.tags.length > 2 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{client.tags.length - 2}
                           </Badge>
-                        ))
-                      ) : (
-                        <span className="text-sm text-muted-foreground">—</span>
-                      )}
-                      {client.tags.length > 2 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{client.tags.length - 2}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
                   {/* Dynamic custom field values */}
                   {customFieldNames.map((fieldName) => (
-                    <TableCell key={fieldName} className="font-mono text-sm">
-                      {customFields[fieldName] !== null &&
-                       customFields[fieldName] !== undefined &&
-                       String(customFields[fieldName]).trim() !== ""
-                        ? String(customFields[fieldName])
-                        : <span className="text-muted-foreground">—</span>}
-                    </TableCell>
+                    isColumnVisible(fieldName) && (
+                      <TableCell key={fieldName} className="font-mono text-sm">
+                        {customFields[fieldName] !== null &&
+                         customFields[fieldName] !== undefined &&
+                         String(customFields[fieldName]).trim() !== ""
+                          ? String(customFields[fieldName])
+                          : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                    )
                   ))}
                 </TableRow>
               );
