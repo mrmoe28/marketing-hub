@@ -163,7 +163,7 @@ export function ClientTable({ clients, visibleColumns = {} }: ClientTableProps) 
             background: #e5e7eb;
           }
         `}</style>
-        <Table>
+        <Table className="min-w-max">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               {isColumnVisible("name") && (
