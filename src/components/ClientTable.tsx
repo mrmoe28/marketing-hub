@@ -121,8 +121,11 @@ export function ClientTable({ clients, visibleColumns = {} }: ClientTableProps) 
     <div className="relative">
       {/* Scroll hint */}
       {customFieldNames.length > 0 && (
-        <div className="mb-2 text-xs text-muted-foreground">
-          Scroll right to see all {5 + customFieldNames.length} columns → (Click and drag to scroll)
+        <div className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <span>Scroll right to see all {5 + customFieldNames.length} columns →</span>
+          <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 font-medium">
+            Use scrollbar below or click & drag table
+          </span>
         </div>
       )}
 
@@ -130,23 +133,32 @@ export function ClientTable({ clients, visibleColumns = {} }: ClientTableProps) 
         ref={tableContainerRef}
         className="overflow-x-auto rounded-lg border cursor-grab"
         style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'hsl(var(--primary) / 0.3) transparent',
+          scrollbarWidth: 'auto',
+          scrollbarColor: 'hsl(var(--primary)) hsl(var(--muted))',
         }}
       >
         <style jsx>{`
           div::-webkit-scrollbar {
-            height: 12px;
+            height: 16px;
           }
           div::-webkit-scrollbar-track {
-            background: transparent;
+            background: hsl(var(--muted));
+            border-radius: 8px;
+            margin: 4px;
           }
           div::-webkit-scrollbar-thumb {
-            background: hsl(var(--primary) / 0.3);
-            border-radius: 6px;
+            background: hsl(var(--primary));
+            border-radius: 8px;
+            border: 2px solid hsl(var(--muted));
+            min-width: 80px;
           }
           div::-webkit-scrollbar-thumb:hover {
-            background: hsl(var(--primary) / 0.5);
+            background: hsl(var(--primary) / 0.8);
+            cursor: grab;
+          }
+          div::-webkit-scrollbar-thumb:active {
+            background: hsl(var(--primary) / 0.9);
+            cursor: grabbing;
           }
         `}</style>
         <Table>
