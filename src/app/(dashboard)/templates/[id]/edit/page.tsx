@@ -23,7 +23,7 @@ export default async function TemplateEditPage({ params }: PageProps) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       <div className="flex items-center gap-4">
         <Button asChild variant="ghost" size="sm">
           <Link href="/templates">
@@ -41,7 +41,7 @@ export default async function TemplateEditPage({ params }: PageProps) {
       </div>
 
       <div className="rounded-lg border bg-card shadow-sm">
-        <div className="p-4">
+        <div className="p-2">
           <TemplateEditForm template={template} />
         </div>
       </div>

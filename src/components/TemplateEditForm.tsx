@@ -344,8 +344,8 @@ export function TemplateEditForm({ template }: { template: Template }) {
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-2">
+      <form onSubmit={handleSubmit} className="space-y-2">
+        <div className="grid gap-2 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">
               Template Name <span className="text-destructive">*</span>
@@ -402,9 +402,9 @@ export function TemplateEditForm({ template }: { template: Template }) {
           />
         </div>
 
-        <div className="grid grid-cols-[1fr,400px] gap-4">
+        <div className="grid grid-cols-[1fr,320px] gap-2">
           {/* Left Side: Editor + Toolbar */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="bodyText">
                 Email Editor <span className="text-destructive">*</span>
@@ -414,7 +414,7 @@ export function TemplateEditForm({ template }: { template: Template }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-[1fr,auto] gap-3">
+            <div className="grid grid-cols-[1fr,auto] gap-2">
               {/* Editor */}
               <div className="space-y-1">
                 <div className="text-xs font-medium text-muted-foreground">Template (with merge tags)</div>
@@ -427,7 +427,7 @@ export function TemplateEditForm({ template }: { template: Template }) {
               </div>
 
               {/* Toolbar */}
-              <div className="flex flex-col gap-1.5 w-44 shadow-lg p-3 rounded-lg border bg-card h-fit">
+              <div className="flex flex-col gap-1.5 w-40 shadow-lg p-2 rounded-lg border bg-card h-fit">
               <div className="text-sm font-semibold mb-1">Toolbar</div>
 
               {/* Variables */}
@@ -665,9 +665,9 @@ export function TemplateEditForm({ template }: { template: Template }) {
           {/* Right Side: Live Preview */}
           <div className="space-y-1">
             <div className="text-xs font-medium text-muted-foreground">Live Preview (what recipients see)</div>
-            <div className="shadow-lg rounded-lg border bg-card p-4 min-h-[600px] max-h-[700px] overflow-y-auto sticky top-4">
-              <div className="space-y-3">
-                <div className="border-b pb-2">
+            <div className="shadow-lg rounded-lg border bg-card p-2 min-h-[600px] max-h-[700px] overflow-y-auto sticky top-4">
+              <div className="space-y-2">
+                <div className="border-b pb-1">
                   <div className="text-xs text-muted-foreground mb-1">Subject:</div>
                   <div className="font-semibold text-sm">{getPreviewText().subject}</div>
                 </div>
