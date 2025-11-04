@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
 // Set longer timeout for AI responses
 export const maxDuration = 60;
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if API key is configured
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: "AI service not configured" },
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const openai = new OpenAI({ apiKey });
+    const anthropic = new Anthropic({ apiKey });
 
     const systemMessage = `You are an AI assistant helping to improve email content.
 The user will provide you with their current email HTML content and ask you to make specific changes.
@@ -38,16 +38,19 @@ Preserve all existing HTML structure, styling, and formatting unless specificall
       ? `Current email content:\n${context}\n\nUser request: ${prompt}`
       : `User request: ${prompt}`;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 4096,
+      system: systemMessage,
       messages: [
-        { role: "system", content: systemMessage },
         { role: "user", content: userMessage },
       ],
-      temperature: 0.7,
     });
 
-    const result = response.choices[0].message.content || context || "";
+    const textBlock = response.content.find(
+      (block): block is Anthropic.TextBlock => block.type === "text"
+    );
+    const result = textBlock?.text || context || "";
 
     return NextResponse.json({ result });
   } catch (error) {
