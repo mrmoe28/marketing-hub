@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { agentTools, executeAgentTool } from "@/lib/agent-tools";
 
 // Set longer timeout for AI responses
@@ -8,108 +8,93 @@ export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// Convert agent tools to OpenAI format
-const convertToolsToOpenAIFormat = (): OpenAI.Chat.Completions.ChatCompletionTool[] => {
+// Convert agent tools to Anthropic format
+const convertToolsToAnthropicFormat = (): Anthropic.Tool[] => {
   return agentTools.map((tool) => ({
-    type: "function" as const,
-    function: {
-      name: tool.name,
-      description: tool.description,
-      parameters: tool.input_schema,
+    name: tool.name,
+    description: tool.description,
+    input_schema: {
+      ...tool.input_schema,
+      type: "object" as const,
     },
   }));
 };
 
-// Legacy tools for backwards compatibility
-const legacyTools: OpenAI.Chat.Completions.ChatCompletionTool[] = [
+// Legacy tools for backwards compatibility (Anthropic format)
+const legacyTools: Anthropic.Tool[] = [
   {
-    type: "function",
-    function: {
-      name: "create_email_template",
-      description: "Create and save a new email template. Use this when the user asks you to create, draft, or design an email template.",
-      parameters: {
-        type: "object",
-        properties: {
-          name: {
-            type: "string",
-            description: "A descriptive name for the template (e.g., 'Welcome Email', 'Monthly Newsletter')"
-          },
-          subject: {
-            type: "string",
-            description: "The email subject line"
-          },
-          bodyHtml: {
-            type: "string",
-            description: "The HTML body of the email with proper formatting, styling, and structure"
-          },
-          bodyText: {
-            type: "string",
-            description: "Plain text version of the email body"
-          },
-          category: {
-            type: "string",
-            description: "Category of the template (e.g., 'welcome', 'promotion', 'newsletter', 'update')"
-          },
-          description: {
-            type: "string",
-            description: "Brief description of what this template is for"
-          }
+    name: "create_email_template",
+    description: "Create and save a new email template. Use this when the user asks you to create, draft, or design an email template.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          description: "A descriptive name for the template (e.g., 'Welcome Email', 'Monthly Newsletter')"
         },
-        required: ["name", "subject", "bodyHtml", "bodyText"]
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_company_profile",
-      description: "Get the company profile information including name, logo, branding, and contact details. Use this to personalize email templates.",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: []
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "list_templates",
-      description: "Get a list of all saved email templates",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: []
-      }
-    }
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_template",
-      description: "Get full details of a specific template by ID, including the HTML body for preview. Use this when the user wants to see or preview a template.",
-      parameters: {
-        type: "object",
-        properties: {
-          templateId: {
-            type: "string",
-            description: "The ID of the template to retrieve"
-          }
+        subject: {
+          type: "string",
+          description: "The email subject line"
         },
-        required: ["templateId"]
-      }
+        bodyHtml: {
+          type: "string",
+          description: "The HTML body of the email with proper formatting, styling, and structure"
+        },
+        bodyText: {
+          type: "string",
+          description: "Plain text version of the email body"
+        },
+        category: {
+          type: "string",
+          description: "Category of the template (e.g., 'welcome', 'promotion', 'newsletter', 'update')"
+        },
+        description: {
+          type: "string",
+          description: "Brief description of what this template is for"
+        }
+      },
+      required: ["name", "subject", "bodyHtml", "bodyText"]
     }
   },
   {
-    type: "function",
-    function: {
-      name: "get_booking_page_url",
-      description: "Get the public booking page URL where customers can schedule appointments. Use this when users ask about booking, scheduling, or appointments.",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: []
-      }
+    name: "get_company_profile",
+    description: "Get the company profile information including name, logo, branding, and contact details. Use this to personalize email templates.",
+    input_schema: {
+      type: "object",
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: "list_templates",
+    description: "Get a list of all saved email templates",
+    input_schema: {
+      type: "object",
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: "get_template",
+    description: "Get full details of a specific template by ID, including the HTML body for preview. Use this when the user wants to see or preview a template.",
+    input_schema: {
+      type: "object",
+      properties: {
+        templateId: {
+          type: "string",
+          description: "The ID of the template to retrieve"
+        }
+      },
+      required: ["templateId"]
+    }
+  },
+  {
+    name: "get_booking_page_url",
+    description: "Get the public booking page URL where customers can schedule appointments. Use this when users ask about booking, scheduling, or appointments.",
+    input_schema: {
+      type: "object",
+      properties: {},
+      required: []
     }
   }
 ];
@@ -177,7 +162,7 @@ async function getBookingPageUrl() {
 
 // Combine all available tools
 const getAllTools = () => {
-  return [...legacyTools, ...convertToolsToOpenAIFormat()];
+  return [...legacyTools, ...convertToolsToAnthropicFormat()];
 };
 
 export async function POST(request: NextRequest) {
@@ -209,19 +194,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if API key is configured
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.ANTHROPIC_API_KEY;
     console.log("API key status:", apiKey ? `Present (${apiKey.substring(0, 10)}...)` : "Missing");
 
     if (!apiKey) {
-      console.error("OPENAI_API_KEY not configured");
+      console.error("ANTHROPIC_API_KEY not configured");
       return NextResponse.json(
         { error: "AI service not configured. Please contact support." },
         { status: 500 }
       );
     }
 
-    console.log("Initializing OpenAI client...");
-    const openai = new OpenAI({
+    console.log("Initializing Anthropic client...");
+    const anthropic = new Anthropic({
       apiKey: apiKey,
     });
 
@@ -250,17 +235,26 @@ export async function POST(request: NextRequest) {
         console.log(`Found ${clientCount} clients, fetched ${clients.length}`);
         const customFieldSample = clients[0]?.customFields || {};
 
+        // Build context with client data, avoiding nested JSON.stringify
+        const clientSummaries = clients.slice(0, 10).map((c, i) => {
+          const customFieldsText = c.customFields
+            ? Object.entries(c.customFields as Record<string, any>)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(", ")
+            : "";
+
+          return `${i + 1}. ${c.email}
+   Name: ${c.firstName || ""} ${c.lastName || ""}
+   Location: ${c.city || "N/A"}, ${c.state || "N/A"}
+   Tags: ${c.tags.map((t) => t.tag.name).join(", ") || "None"}
+   ${customFieldsText ? `Custom data: ${customFieldsText}` : ""}`;
+        }).join("\n\n");
+
         context = `
 You have access to a client database with ${clientCount} clients. Here's a sample of the data:
 
 Recent clients (showing ${clients.length}):
-${clients.slice(0, 10).map((c, i) => `
-${i + 1}. ${c.email}
-   Name: ${c.firstName || ""} ${c.lastName || ""}
-   Location: ${c.city || "N/A"}, ${c.state || "N/A"}
-   Tags: ${c.tags.map((t) => t.tag.name).join(", ") || "None"}
-   ${c.customFields ? `Custom data: ${JSON.stringify(c.customFields)}` : ""}
-`).join("")}
+${clientSummaries}
 
 Custom fields available: ${Object.keys(customFieldSample).join(", ")}
 `;
@@ -270,12 +264,12 @@ Custom fields available: ${Object.keys(customFieldSample).join(", ")}
       }
     }
 
-    console.log("Calling OpenAI API with function calling...");
+    console.log("Calling Anthropic API with function calling...");
+    console.log("Context length:", context.length);
+    console.log("Context preview:", context.substring(0, 200));
 
-    // Build messages array with conversation history
-    const systemMessage = {
-      role: "system" as const,
-      content: `You are an autonomous AI assistant for a Marketing Hub CRM and email marketing platform.
+    // Build system message for Anthropic (separate from messages)
+    const systemPrompt = `You are an autonomous AI assistant for a Marketing Hub CRM and email marketing platform.
 
 You have FULL CONTROL to perform actions on behalf of the user. Be proactive and helpful.
 
@@ -336,14 +330,21 @@ IMPORTANT: When you have access to client data (above), ALWAYS use it to answer 
    - Use updateBookingStatus to manage appointments
 
 ALWAYS execute actions when asked. Don't just explain what could be done - DO IT.
-Be proactive, autonomous, and helpful. Remember context from previous messages.`
-    };
+Be proactive, autonomous, and helpful. Remember context from previous messages.`;
 
-    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [systemMessage];
+    // Build messages array for Anthropic (no system message in array)
+    const messages: Anthropic.MessageParam[] = [];
 
-    // Add conversation history if exists
+    // Add conversation history if exists (filter out system messages)
     if (conversationMessages.length > 0) {
-      messages.push(...conversationMessages.slice(-10)); // Keep last 10 messages for context
+      conversationMessages.slice(-10).forEach((msg: any) => {
+        if (msg.role !== 'system') {
+          messages.push({
+            role: msg.role as 'user' | 'assistant',
+            content: msg.content
+          });
+        }
+      });
     }
 
     // Add current user message
@@ -352,30 +353,55 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
       content: message,
     });
 
-    let response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: messages,
-      tools: getAllTools(),
-      tool_choice: "auto",
-    });
+    console.log("About to call Anthropic API");
+    console.log("Messages count:", messages.length);
+    console.log("System prompt length:", systemPrompt.length);
+    console.log("Tools count:", getAllTools().length);
 
-    let responseMessage = response.choices[0].message;
-    const toolCalls = responseMessage.tool_calls;
+    let response;
+    try {
+      response = await anthropic.messages.create({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: messages,
+        tools: getAllTools(),
+      });
+      console.log("Anthropic API call successful");
+    } catch (apiError: any) {
+      console.error("Anthropic API error details:", {
+        message: apiError.message,
+        status: apiError.status,
+        type: apiError.type,
+        error: apiError.error
+      });
+      throw apiError;
+    }
+
     const executedTools: string[] = [];
+    let finalText = "";
 
-    // Handle tool calls if any
-    if (toolCalls && toolCalls.length > 0) {
-      console.log(`Processing ${toolCalls.length} tool calls`);
+    // Handle tool calls if any (Anthropic format)
+    if (response.stop_reason === "tool_use") {
+      const toolUseBlocks = response.content.filter(
+        (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
+      );
 
-      // Add assistant's message with tool calls
-      messages.push(responseMessage);
+      console.log(`Processing ${toolUseBlocks.length} tool calls`);
+
+      // Add assistant's message to history
+      messages.push({
+        role: "assistant",
+        content: response.content,
+      });
+
+      // Build tool results
+      const toolResults: Anthropic.ToolResultBlockParam[] = [];
 
       // Execute each tool call
-      for (const toolCall of toolCalls) {
-        if (toolCall.type !== 'function') continue;
-
-        const functionName = toolCall.function.name;
-        const functionArgs = JSON.parse(toolCall.function.arguments);
+      for (const toolUse of toolUseBlocks) {
+        const functionName = toolUse.name;
+        const functionArgs = toolUse.input as any;
 
         console.log(`Executing function: ${functionName}`, functionArgs);
         executedTools.push(functionName);
@@ -416,25 +442,48 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
           };
         }
 
-        // Add function response to messages
-        messages.push({
-          role: "tool",
-          tool_call_id: toolCall.id,
-          content: JSON.stringify(functionResponse),
+        // Anthropic expects string content, ensure proper formatting
+        const resultContent = typeof functionResponse === 'string'
+          ? functionResponse
+          : JSON.stringify(functionResponse, null, 2);
+
+        toolResults.push({
+          type: "tool_result",
+          tool_use_id: toolUse.id,
+          content: resultContent,
         });
       }
 
-      // Get final response from AI with function results
-      response = await openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: messages,
+      // Add tool results to messages
+      messages.push({
+        role: "user",
+        content: toolResults,
       });
 
-      responseMessage = response.choices[0].message;
+      // Get final response from AI with function results
+      const finalResponse = await anthropic.messages.create({
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages: messages,
+        tools: getAllTools(),
+      });
+
+      // Extract text from final response
+      const textBlocks = finalResponse.content.filter(
+        (block): block is Anthropic.TextBlock => block.type === "text"
+      );
+      finalText = textBlocks.map(block => block.text).join("\n");
+    } else {
+      // No tool use, extract text directly
+      const textBlocks = response.content.filter(
+        (block): block is Anthropic.TextBlock => block.type === "text"
+      );
+      finalText = textBlocks.map(block => block.text).join("\n");
     }
 
-    console.log("✅ OpenAI API call successful!");
-    const text = responseMessage.content || "";
+    console.log("✅ Anthropic API call successful!");
+    const text = finalText;
 
     // Save conversation to database
     const newMessage = { role: "user", content: message, timestamp: new Date().toISOString() };
