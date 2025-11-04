@@ -59,3 +59,4 @@ See `.env.example` for full list. Required:
 - `npm run db:migrate` - Run Prisma migrations
 - `npm run db:seed` - Seed database
 - `npm run db:studio` - Open Prisma Studio
+
