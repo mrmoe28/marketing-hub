@@ -415,6 +415,7 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
 
       // Execute each tool call
       for (const toolCall of toolCalls) {
+        if (toolCall.type !== 'function') continue;
         const functionName = toolCall.function.name;
         const functionArgs = JSON.parse(toolCall.function.arguments);
 
