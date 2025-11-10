@@ -1,0 +1,263 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  firstName      String?
+  lastName       String?
+  company        String?
+  phone          String?
+  address1       String?
+  address2       String?
+  city           String?
+  state          String?
+  postalCode     String?
+  country        String?
+  tags           TagOnClient[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  filesPrefix    String?
+  jobs           EmailJob[]
+  events         Event[]
+  subscriptions  Subscription[]
+  bookings       Booking[]
+  customFields   Json?            // Store any additional CSV columns as JSON
+}
+
+model Tag {
+  id      String        @id @default(cuid())
+  name    String        @unique
+  clients TagOnClient[]
+}
+
+model TagOnClient {
+  clientId   String
+  tagId      String
+  assignedAt DateTime @default(now())
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([clientId, tagId])
+}
+
+model Segment {
+  id        String   @id @default(cuid())
+  name      String
+  queryJson Json
+  createdAt DateTime @default(now())
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  name        String
+  subject     String
+  fromEmail   String
+  fromName    String?
+  bodyHtml    String         @db.Text
+  bodyText    String         @db.Text
+  status      CampaignStatus @default(DRAFT)
+  scheduledAt DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  jobs        EmailJob[]
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  CANCELLED
+}
+
+model EmailJob {
+  id          String    @id @default(cuid())
+  campaignId  String
+  clientId    String
+  toEmail     String
+  status      JobStatus @default(PENDING)
+  error       String?
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  openedAt    DateTime?
+  clickedAt   DateTime?
+  unsubAt     DateTime?
+  openToken   String    @default(cuid())
+  clickToken  String    @default(cuid())
+  unsubToken  String    @default(cuid())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([clientId])
+  @@index([status])
+  @@index([openToken])
+  @@index([clickToken])
+  @@index([unsubToken])
+}
+
+enum JobStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  SUPPRESSED
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  clientId  String
+  channel   String
+  status    String
+  token     String   @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([channel, clientId])
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  type      String
+  clientId  String?
+  jobId     String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+// AI Agent Memory & Context
+model CompanyProfile {
+  id                String   @id @default(cuid())
+  companyName       String
+  companyLogo       String?  // URL to logo
+  companyWebsite    String?
+  industry          String?
+  description       String?  @db.Text
+  brandVoice        String?  @db.Text // e.g., "Professional and friendly", "Casual and fun"
+  primaryColor      String?  // Hex color for branding
+  secondaryColor    String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Contact details
+  contactEmail      String?
+  contactPhone      String?
+  address           String?
+
+  // Email signature defaults
+  defaultSignature  String?  @db.Text
+  defaultFromName   String?
+  defaultFromEmail  String?
+
+  // Booking Page Customization
+  bookingPageTitle       String?  @default("Schedule an Appointment")
+  bookingPageSubtitle    String?  @default("Book a convenient time for your visit")
+  bookingPageHeader      String?  @default("Request an Appointment")
+  bookingPageDescription String?  @db.Text @default("Fill out the form below and we'll get back to you to confirm your appointment")
+  businessHours          String?  @default("Monday - Friday, 9:00 AM - 5:00 PM")
+  showInfoCards          Boolean  @default(true)
+  bookingPageBgColor     String?  @default("from-blue-50 to-violet-50")
+}
+
+model AgentMemory {
+  id        String   @id @default(cuid())
+  key       String   @unique  // e.g., "user_preferences", "common_templates"
+  value     Json                // Flexible JSON storage for any data
+  category  String?             // e.g., "user", "template", "preference"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ConversationHistory {
+  id        String   @id @default(cuid())
+  messages  Json     // Array of {role, content, timestamp}
+  summary   String?  @db.Text // AI-generated summary of conversation
+  topics    String[] // Topics discussed
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  subject     String
+  bodyHtml    String   @db.Text
+  bodyText    String   @db.Text
+  category    String?  // e.g., "welcome", "promotion", "update"
+  description String?  @db.Text
+  thumbnail   String?  // Preview image URL
+  isAiCreated Boolean  @default(false) // True if created by AI agent
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Booking {
+  id                String        @id @default(cuid())
+  clientId          String?
+  clientName        String        // Full name of person booking
+  clientEmail       String        // Email for confirmation
+  clientPhone       String?       // Optional phone number
+  serviceType       String        // Type of appointment (e.g., "Solar System Troubleshooting")
+  scheduledDate     DateTime      // Date and time of appointment
+  duration          Int           @default(60) // Duration in minutes
+  timezone          String        @default("America/New_York") // Client's timezone
+  status            BookingStatus @default(PENDING)
+  notes             String?       @db.Text // Client notes or special requests
+  internalNotes     String?       @db.Text // Staff notes
+  googleEventId     String?       // Google Calendar event ID for sync
+  reminderSent      Boolean       @default(false)
+  confirmedAt       DateTime?
+  cancelledAt       DateTime?
+  cancellationReason String?      @db.Text
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([clientEmail])
+  @@index([scheduledDate])
+  @@index([status])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+model AgentActivity {
+  id              String         @id @default(cuid())
+  conversationId  String?        // Link to conversation
+  toolName        String         // Name of tool executed
+  toolInput       Json           // Parameters passed to the tool
+  toolOutput      Json?          // Result returned by the tool
+  status          ActivityStatus @default(PENDING)
+  error           String?        @db.Text
+  duration        Int?           // Execution time in milliseconds
+  createdAt       DateTime       @default(now())
+
+  @@index([conversationId])
+  @@index([toolName])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum ActivityStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
