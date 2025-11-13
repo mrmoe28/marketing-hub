@@ -397,8 +397,29 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
         message: apiError.message,
         status: apiError.status,
         type: apiError.type,
-        error: apiError.error
+        error: apiError.error,
+        code: apiError.code
       });
+      
+      // Enhance error message with more context
+      if (apiError.status === 401) {
+        const enhancedError = new Error("Invalid API key. Please check your OPENAI_API_KEY environment variable.");
+        enhancedError.name = apiError.name || "AuthenticationError";
+        throw enhancedError;
+      } else if (apiError.status === 429) {
+        const enhancedError = new Error("Rate limit exceeded. Please wait a moment and try again.");
+        enhancedError.name = apiError.name || "RateLimitError";
+        throw enhancedError;
+      } else if (apiError.status === 500 || apiError.status === 502 || apiError.status === 503) {
+        const enhancedError = new Error("AI service is temporarily unavailable. Please try again in a moment.");
+        enhancedError.name = apiError.name || "ServiceUnavailableError";
+        throw enhancedError;
+      } else if (apiError.code === "ECONNREFUSED" || apiError.code === "ENOTFOUND") {
+        const enhancedError = new Error("Network error: Unable to connect to AI service. Please check your OPENAI_API_BASE_URL if using a custom endpoint.");
+        enhancedError.name = apiError.name || "NetworkError";
+        throw enhancedError;
+      }
+      
       throw apiError;
     }
 
@@ -529,12 +550,31 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
     console.error("=== CHAT API ERROR ===");
     console.error("Error type:", typeof error);
     console.error("Error message:", error instanceof Error ? error.message : String(error));
+    console.error("Error stack:", error instanceof Error ? error.stack : undefined);
 
     let errorMessage = "Failed to connect to AI service. Please try again.";
     let debugInfo = "";
 
     if (error instanceof Error) {
       debugInfo = error.message;
+      
+      // Provide more specific error messages based on error type
+      if (error.message.includes("API key") || error.message.includes("authentication")) {
+        errorMessage = "AI service authentication failed. Please check your API key configuration.";
+      } else if (error.message.includes("network") || error.message.includes("fetch") || error.message.includes("ECONNREFUSED")) {
+        errorMessage = "Network error: Unable to reach AI service. Please check your internet connection and try again.";
+      } else if (error.message.includes("timeout") || error.message.includes("TIMEOUT")) {
+        errorMessage = "Request timed out. The AI service is taking too long to respond. Please try again.";
+      } else if (error.message.includes("rate limit") || error.message.includes("429")) {
+        errorMessage = "Rate limit exceeded. Please wait a moment and try again.";
+      } else if (error.message.includes("model") || error.message.includes("invalid")) {
+        errorMessage = "Invalid model configuration. Please check your AI service settings.";
+      } else if (error.message.includes("OPENAI_API_KEY")) {
+        errorMessage = "AI service not configured. Please set OPENAI_API_KEY in your environment variables.";
+      } else {
+        // Use the actual error message if it's informative
+        errorMessage = error.message || errorMessage;
+      }
     }
 
     return NextResponse.json(
