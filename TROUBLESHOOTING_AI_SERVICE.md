@@ -66,7 +66,22 @@ This is a generic error that can occur for several reasons. The application now 
 - Check that your API key has access to the specified model
 - Default model is "gpt-3.5-turbo" if not specified
 
-#### 7. Custom Base URL Issues
+#### 7. Model Doesn't Support Tools (Function Calling)
+**Error Message:** "400 [model-name] does not support tools" or similar
+
+**Solution:**
+- The AI agent requires a model that supports function calling (tools)
+- **OpenAI models that support tools:**
+  - `gpt-3.5-turbo` (recommended for cost-effectiveness)
+  - `gpt-4`
+  - `gpt-4-turbo`
+- **Ollama models:** Most local models don't support function calling by default
+  - If using Ollama, you may need to use OpenAI-compatible models or configure tool support
+  - Consider using OpenAI API directly or an OpenAI-compatible service
+- **Other providers:** Ensure your model/API supports OpenAI's function calling format
+- Update `MODEL_NAME` in your environment variables to a supported model
+
+#### 8. Custom Base URL Issues
 **Error Message:** "Network error: Unable to connect to AI service. Please check your OPENAI_API_BASE_URL if using a custom endpoint."
 
 **Solution:**

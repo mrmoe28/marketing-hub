@@ -384,6 +384,7 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
     console.log("Tools count:", getAllTools().length);
 
     let response;
+    let toolsSupported = true;
     try {
       response = await openai.chat.completions.create({
         model,
@@ -401,33 +402,94 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
         code: apiError.code
       });
       
-      // Enhance error message with more context
-      if (apiError.status === 401) {
-        const enhancedError = new Error("Invalid API key. Please check your OPENAI_API_KEY environment variable.");
-        enhancedError.name = apiError.name || "AuthenticationError";
-        throw enhancedError;
-      } else if (apiError.status === 429) {
-        const enhancedError = new Error("Rate limit exceeded. Please wait a moment and try again.");
-        enhancedError.name = apiError.name || "RateLimitError";
-        throw enhancedError;
-      } else if (apiError.status === 500 || apiError.status === 502 || apiError.status === 503) {
-        const enhancedError = new Error("AI service is temporarily unavailable. Please try again in a moment.");
-        enhancedError.name = apiError.name || "ServiceUnavailableError";
-        throw enhancedError;
-      } else if (apiError.code === "ECONNREFUSED" || apiError.code === "ENOTFOUND") {
-        const enhancedError = new Error("Network error: Unable to connect to AI service. Please check your OPENAI_API_BASE_URL if using a custom endpoint.");
-        enhancedError.name = apiError.name || "NetworkError";
-        throw enhancedError;
+      // Check if model doesn't support tools
+      if (apiError.message?.includes("does not support tools") || 
+          apiError.message?.includes("tools are not supported") ||
+          apiError.status === 400 && apiError.message?.includes("tools")) {
+        console.log("Model doesn't support tools, falling back to non-tool mode");
+        toolsSupported = false;
+        
+        // Retry without tools, but with enhanced system prompt that includes data access instructions
+        try {
+          // Enhance system prompt for non-tool mode
+          const enhancedSystemPrompt = systemPrompt + `
+
+NOTE: This model does not support function calling. You can still help the user by:
+- Answering questions about their data based on the context provided
+- Providing general advice about email marketing, campaigns, and client management
+- Explaining features and capabilities of the system
+- If the user asks about specific data (like client counts, locations, etc.), use the context information provided above.
+
+You cannot directly perform actions like creating campaigns or templates, but you can guide the user on how to do these things.`;
+
+          // Update system message
+          const messagesWithoutTools = messages.map((msg, idx) => {
+            if (idx === 0 && msg.role === "system") {
+              return { ...msg, content: enhancedSystemPrompt };
+            }
+            return msg;
+          });
+
+          response = await openai.chat.completions.create({
+            model,
+            max_tokens: 4096,
+            messages: messagesWithoutTools,
+          });
+          console.log("OpenAI API call successful (without tools)");
+        } catch (retryError: any) {
+          // If retry also fails, handle the original error
+          console.error("Retry without tools also failed:", retryError);
+          
+          // Enhance error message with more context
+          if (apiError.status === 401) {
+            const enhancedError = new Error("Invalid API key. Please check your OPENAI_API_KEY environment variable.");
+            enhancedError.name = apiError.name || "AuthenticationError";
+            throw enhancedError;
+          } else if (apiError.status === 429) {
+            const enhancedError = new Error("Rate limit exceeded. Please wait a moment and try again.");
+            enhancedError.name = apiError.name || "RateLimitError";
+            throw enhancedError;
+          } else if (apiError.status === 500 || apiError.status === 502 || apiError.status === 503) {
+            const enhancedError = new Error("AI service is temporarily unavailable. Please try again in a moment.");
+            enhancedError.name = apiError.name || "ServiceUnavailableError";
+            throw enhancedError;
+          } else if (apiError.code === "ECONNREFUSED" || apiError.code === "ENOTFOUND") {
+            const enhancedError = new Error("Network error: Unable to connect to AI service. Please check your OPENAI_API_BASE_URL if using a custom endpoint.");
+            enhancedError.name = apiError.name || "NetworkError";
+            throw enhancedError;
+          }
+          
+          throw apiError;
+        }
+      } else {
+        // Enhance error message with more context for other errors
+        if (apiError.status === 401) {
+          const enhancedError = new Error("Invalid API key. Please check your OPENAI_API_KEY environment variable.");
+          enhancedError.name = apiError.name || "AuthenticationError";
+          throw enhancedError;
+        } else if (apiError.status === 429) {
+          const enhancedError = new Error("Rate limit exceeded. Please wait a moment and try again.");
+          enhancedError.name = apiError.name || "RateLimitError";
+          throw enhancedError;
+        } else if (apiError.status === 500 || apiError.status === 502 || apiError.status === 503) {
+          const enhancedError = new Error("AI service is temporarily unavailable. Please try again in a moment.");
+          enhancedError.name = apiError.name || "ServiceUnavailableError";
+          throw enhancedError;
+        } else if (apiError.code === "ECONNREFUSED" || apiError.code === "ENOTFOUND") {
+          const enhancedError = new Error("Network error: Unable to connect to AI service. Please check your OPENAI_API_BASE_URL if using a custom endpoint.");
+          enhancedError.name = apiError.name || "NetworkError";
+          throw enhancedError;
+        }
+        
+        throw apiError;
       }
-      
-      throw apiError;
     }
 
     const executedTools: string[] = [];
     let finalText = "";
 
-    // Handle tool calls if any (OpenAI format)
-    if (response.choices[0]?.message?.tool_calls) {
+    // Handle tool calls if any (OpenAI format) - only if tools are supported
+    if (toolsSupported && response.choices[0]?.message?.tool_calls) {
       const toolCalls = response.choices[0].message.tool_calls;
       console.log(`Processing ${toolCalls.length} tool calls`);
 
