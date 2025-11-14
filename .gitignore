@@ -40,3 +40,4 @@ prisma/migrations
 
 # uploads
 public/uploads
+.env.production
