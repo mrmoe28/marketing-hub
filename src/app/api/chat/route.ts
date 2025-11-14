@@ -591,7 +591,8 @@ You cannot directly perform actions like creating campaigns or templates, but yo
     return NextResponse.json(
       {
         error: errorMessage,
-        debug: process.env.NODE_ENV === "development" ? debugInfo : undefined
+        debug: debugInfo, // TEMP: Always show real error to diagnose production issue
+        realError: error instanceof Error ? error.message : String(error)
       },
       { status: 500 }
     );
