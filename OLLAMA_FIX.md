@@ -254,3 +254,56 @@ npx tsx test-ai-agent-playwright.ts
 **Solution**: Start server with explicit env vars or clean shell profile
 **Status**: ✅ WORKING - AI Agent responds successfully with customer data
 **Performance**: 62s response time is normal for local setup with tool calling
+
+---
+
+# PRODUCTION DEPLOYMENT (2025-11-14)
+
+## Production Status: ✅ DEPLOYED & CONFIGURED
+
+**Production URL**: `https://marketing-hub-main-kasyfq2dc-ekoapps.vercel.app`
+
+### Environment Variables Configured:
+```
+OPENAI_API_KEY=ollama
+OPENAI_API_BASE_URL=https://uninterlinked-woozy-bell.ngrok-free.dev/v1
+MODEL_NAME=qwen2.5:1.5b
+```
+
+### ngrok Tunnel Status:
+- ✅ **Running**: `https://uninterlinked-woozy-bell.ngrok-free.dev`
+- ✅ **Target**: `localhost:11434` (Ollama)
+- ✅ **Verified**: Can access Ollama models through tunnel
+
+### Deployment Details:
+- **Build Status**: ✅ Successful
+- **Deployment ID**: `BAzvkmHYu6QponaTLgSgEJwKkkmG`
+- **Authentication**: Vercel SSO protection enabled (requires login)
+- **Configuration**: Optimized with qwen2.5:1.5b and reduced context (2.4KB)
+
+### How to Test Production:
+1. Open `https://marketing-hub-main-kasyfq2dc-ekoapps.vercel.app` in browser
+2. Log in with your Vercel account
+3. Navigate to AI Agent
+4. Test with query: "How many clients do I have in Georgia?"
+5. Expected response time: ~10-15 seconds
+
+### Production Infrastructure:
+```
+[Vercel Production]
+    ↓ (HTTPS)
+[ngrok Tunnel: uninterlinked-woozy-bell.ngrok-free.dev]
+    ↓ (HTTP)
+[Local Ollama: localhost:11434]
+    ↓
+[qwen2.5:1.5b Model]
+```
+
+### Notes:
+- ngrok tunnel must stay running for production to work
+- Ollama must be running locally on port 11434
+- Free ngrok tunnels may expire after 2 hours of inactivity
+- For permanent solution, consider:
+  - Paid ngrok account (persistent URLs)
+  - Self-hosted VPS with public IP running Ollama
+  - Cloud-hosted LLM alternative (OpenAI, Anthropic, etc.)

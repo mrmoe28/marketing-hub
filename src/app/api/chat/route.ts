@@ -290,69 +290,14 @@ Custom fields available: ${Object.keys(customFieldSample).join(", ")}
     console.log("Context length:", context.length);
     console.log("Context preview:", context.substring(0, 200));
 
-    // Build system message for OpenAI
-    const systemPrompt = `You are an autonomous AI assistant for a Marketing Hub CRM and email marketing platform.
-
-You have FULL CONTROL to perform actions on behalf of the user. Be proactive and helpful.
+    // Build system message for OpenAI (OPTIMIZED for performance)
+    const systemPrompt = `You are an AI assistant for a Marketing Hub CRM platform.
 
 ${context}
 
-IMPORTANT: When you have access to client data (above), ALWAYS use it to answer questions about clients, statistics, counts, locations, etc. Never give generic responses when you have the actual data.
+CAPABILITIES: campaigns, email templates, client management, bookings, analytics.
 
-🎯 YOUR CAPABILITIES:
-
-📧 CAMPAIGN MANAGEMENT:
-- createCampaign: Create and send email campaigns to clients
-- sendCampaign: Start sending a campaign immediately
-- getCampaignStats: Analyze campaign performance (open rates, click rates, etc.)
-
-📝 TEMPLATE MANAGEMENT:
-- createEmailTemplate: Create professional email templates with HTML formatting
-- updateEmailTemplate: Modify existing templates
-- sendTestEmail: Send test emails to verify template appearance
-- listTemplates: Browse all available templates
-- get_template: Get full details of a specific template
-
-👥 CLIENT MANAGEMENT:
-- searchClients: Find clients by location, tags, or search query
-- addClient: Add new clients to the database
-- tagClients: Organize clients with tags
-- getClientStats: Get insights about client distribution and demographics
-
-📅 BOOKING MANAGEMENT:
-- createBooking: Schedule appointments for clients
-- updateBookingStatus: Change booking status (confirm, cancel, complete)
-- listBookings: View upcoming and past bookings
-
-📊 COMPANY INFO:
-- get_company_profile: Access company branding and contact details
-- get_booking_page_url: Get the public booking page link
-
-🚀 HOW TO BE AUTONOMOUS:
-
-1. When asked to "create a campaign for clients in Georgia":
-   - Use searchClients to find Georgia clients
-   - Use createCampaign with those client IDs
-   - Report back with results
-
-2. When asked to "send a follow-up email to hot leads":
-   - Search for clients tagged "hot-lead"
-   - Create a template if needed
-   - Create and send campaign
-   - Show stats
-
-3. When asked about performance:
-   - Use getCampaignStats
-   - Analyze the data
-   - Provide actionable insights
-
-4. When managing bookings:
-   - Use createBooking for new appointments
-   - Use listBookings to check availability
-   - Use updateBookingStatus to manage appointments
-
-ALWAYS execute actions when asked. Don't just explain what could be done - DO IT.
-Be proactive, autonomous, and helpful. Remember context from previous messages.`;
+Use available tools to help users. Be direct and action-oriented.`;
 
     // Build messages array for OpenAI
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [];
@@ -381,7 +326,7 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
       content: message,
     });
 
-    console.log("About to call OpenAI API");
+    console.log("About to call OpenAI API with streaming");
     console.log("Messages count:", messages.length);
     console.log("System prompt length:", systemPrompt.length);
     console.log("Tools count:", getAllTools().length);
@@ -391,9 +336,10 @@ Be proactive, autonomous, and helpful. Remember context from previous messages.`
     try {
       response = await openai.chat.completions.create({
         model,
-        max_tokens: 4096,
+        max_tokens: 1000, // Reduced from 4096 for faster responses
         messages,
         tools: getAllTools(),
+        stream: false, // Keep non-streaming for tool calls
       });
       console.log("OpenAI API call successful");
     } catch (apiError: any) {
@@ -435,7 +381,7 @@ You cannot directly perform actions like creating campaigns or templates, but yo
 
           response = await openai.chat.completions.create({
             model,
-            max_tokens: 4096,
+            max_tokens: 1000, // Reduced from 4096 for faster responses
             messages: messagesWithoutTools,
           });
           console.log("OpenAI API call successful (without tools)");
@@ -555,7 +501,7 @@ You cannot directly perform actions like creating campaigns or templates, but yo
       // Get final response from AI with function results
       const finalResponse = await openai.chat.completions.create({
         model,
-        max_tokens: 4096,
+        max_tokens: 1000, // Reduced from 4096 for faster responses
         messages,
         tools: getAllTools(),
       });
