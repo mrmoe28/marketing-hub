@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { emailProvider } from "@/lib/email";
 import { convertTextToHtml, wrapInEmailTemplate } from "@/lib/email-utils";
 import { createJobsForAudience } from "@/lib/tracking";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 /**
  * Agent Tools Library
@@ -661,6 +663,80 @@ export async function listBookings(params?: {
 }
 
 // ============================================================================
+// CLIENT FILE SYSTEM TOOLS (Performance optimization)
+// ============================================================================
+
+/**
+ * Get clients from the file system cache organized by state
+ * This is much faster than database queries for large datasets
+ */
+export async function getClientsFromState(params: {
+  state: string;
+}) {
+  try {
+    const stateNormalized = params.state.toUpperCase();
+    const filePath = join(process.cwd(), "data", "clients", `${stateNormalized.toLowerCase()}.json`);
+
+    try {
+      const fileContent = readFileSync(filePath, "utf-8");
+      const clients = JSON.parse(fileContent);
+
+      return {
+        success: true,
+        clients,
+        count: clients.length,
+        state: stateNormalized,
+      };
+    } catch (fileError) {
+      // File not found or invalid - state might not have clients
+      return {
+        success: true,
+        clients: [],
+        count: 0,
+        state: stateNormalized,
+        message: `No clients found for state ${stateNormalized}`,
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get clients from state",
+    };
+  }
+}
+
+/**
+ * Get available states from the index
+ */
+export async function getAvailableStates() {
+  try {
+    const indexPath = join(process.cwd(), "data", "clients", "index.json");
+
+    try {
+      const fileContent = readFileSync(indexPath, "utf-8");
+      const index = JSON.parse(fileContent);
+
+      return {
+        success: true,
+        states: index.states,
+        totalClients: index.totalClients,
+        lastUpdated: index.lastUpdated,
+      };
+    } catch (fileError) {
+      return {
+        success: false,
+        error: "Client data not yet exported. Run 'npx tsx scripts/export-clients.ts' to generate client files.",
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get available states",
+    };
+  }
+}
+
+// ============================================================================
 // TOOL DEFINITIONS FOR CLAUDE
 // ============================================================================
 
@@ -812,6 +888,25 @@ export const agentTools = [
     },
   },
   {
+    name: "getClientsFromState",
+    description: "Get all clients from a specific US state from the file system cache. This is MUCH faster than database queries and should be preferred for client lookups.",
+    input_schema: {
+      type: "object",
+      properties: {
+        state: { type: "string", description: "Two-letter US state code (e.g., 'GA', 'SC', 'NY')" },
+      },
+      required: ["state"],
+    },
+  },
+  {
+    name: "getAvailableStates",
+    description: "Get a list of all states that have clients, with client counts and metadata. Use this to discover which states have data before calling getClientsFromState.",
+    input_schema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
     name: "createBooking",
     description: "Create a new booking/appointment for a client",
     input_schema: {
@@ -904,6 +999,12 @@ export async function executeAgentTool(
         break;
       case "getClientStats":
         result = await getClientStats();
+        break;
+      case "getClientsFromState":
+        result = await getClientsFromState(toolInput);
+        break;
+      case "getAvailableStates":
+        result = await getAvailableStates();
         break;
       case "createBooking":
         result = await createBooking({

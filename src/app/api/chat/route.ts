@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
       try {
         console.log("Fetching client data...");
         const clients = await db.client.findMany({
-          take: 50,
+          take: 10,
           include: {
             tags: {
               include: {
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
         const customFieldSample = clients[0]?.customFields || {};
 
         // Build context with client data, avoiding nested JSON.stringify
-        const clientSummaries = clients.slice(0, 10).map((c, i) => {
+        const clientSummaries = clients.map((c, i) => {
           const customFieldsText = c.customFields
             ? Object.entries(c.customFields as Record<string, any>)
                 .map(([key, value]) => `${key}: ${value}`)
