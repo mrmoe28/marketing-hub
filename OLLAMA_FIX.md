@@ -159,10 +159,72 @@ Response time of 60+ seconds is **normal** for:
 - 22K character context (100 clients + system prompt)
 
 ### Models That Work:
-- ✅ `qwen2.5-coder:7b` - Supports tools, WORKING
+- ✅ `qwen2.5-coder:7b` - Supports tools, WORKING (62.4s response time, correct answers)
 - ✅ `qwen2.5:7b` - Should support tools
+- ⚠️ `pam-native` (qwen3:0.6b) - Supports tools natively, VERY FAST (7.6s) but **too small for 21 tools** - gives incorrect answers
 - ❌ `dolphin-llama3:8b` - Error: "does not support tools"
 - ❌ `gemma3:1b` - Too small for complex tasks
+
+### Performance vs Accuracy Tradeoff:
+| Model | Size | Response Time | Tool Understanding | Recommendation |
+|-------|------|--------------|-------------------|----------------|
+| pam-native | 0.6B | 7.6s | ❌ Poor (confused about available tools) | Not suitable for 21 tools |
+| qwen2.5-coder:7b | 7.6B | 62.4s | ✅ Excellent | Best for accuracy |
+
+**Conclusion**: For the AI Agent with 21 tools and large context (22KB system prompt + 19KB client data), you need at least a 7B parameter model. The 0.6B model is too small to properly understand and reason about which tools to use.
+
+---
+
+# FINAL SOLUTION (2025-11-14)
+
+## Winning Configuration ✅
+
+**Model**: `qwen2.5:1.5b`
+**Response Time**: ~10 seconds
+**Accuracy**: Excellent (correctly uses tools)
+**Context Size**: 2.4KB (no client data preloaded)
+
+### Key Optimization: Removed Client Data from Context
+
+Instead of sending 10 sample clients (19KB) in every request, the AI now:
+- Gets a minimal system prompt (2.4KB)
+- Fetches client data on-demand via `getClientStats` and `searchClients` tools
+- Responds 6x faster than qwen2.5-coder:7b
+- Still provides accurate answers
+
+### Code Change
+
+In `src/app/api/chat/route.ts`:
+```typescript
+// DISABLED FOR PERFORMANCE: AI can fetch client data via searchClients/getClientStats tools
+if (false && includeClientData) {
+```
+
+This prevents the expensive database query and context bloat on every request.
+
+### Final Performance Comparison
+
+| Configuration | Model | Context | Response Time | Accuracy |
+|--------------|-------|---------|---------------|----------|
+| ❌ Original | qwen2.5-coder:7b | 41KB | 62.4s | ✅ Excellent |
+| ❌ Mid-size with data | qwen2.5:1.5b | 41KB | 38.2s | ✅ Good |
+| ✅ **OPTIMAL** | **qwen2.5:1.5b** | **2.4KB** | **10.1s** | ✅ **Excellent** |
+| ❌ Too small | pam-native (0.6B) | 2.4KB | 7.6s | ❌ Poor |
+
+### How to Use
+
+Start the server with:
+```bash
+OPENAI_API_BASE_URL=http://localhost:11434/v1 \
+OPENAI_API_KEY=ollama \
+MODEL_NAME=qwen2.5:1.5b \
+TURBOPACK=0 npm run dev
+```
+
+Or update `.env.local`:
+```
+MODEL_NAME=qwen2.5:1.5b
+```
 
 ## Verification Commands
 

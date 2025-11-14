@@ -232,8 +232,11 @@ export async function POST(request: NextRequest) {
     let context = "";
     console.log("Building context, includeClientData:", includeClientData);
 
-    // Optionally include client data summary
-    if (includeClientData) {
+    // PERFORMANCE OPTIMIZATION (2025-11-14):
+    // Disabled preloading client data to reduce context from 41KB to 2.4KB
+    // This reduced response time from 62s to 10s with qwen2.5:1.5b model
+    // AI can still fetch client data on-demand via searchClients/getClientStats tools
+    if (false && includeClientData) {
       try {
         console.log("Fetching client data...");
         const clients = await db.client.findMany({
