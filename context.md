@@ -1,5 +1,27 @@
 # AI Service Implementation & Error Handling
 
+## API Error Investigation (Nov 15, 2025)
+
+### Current Errors
+- **404 Error**: Resource not found (unspecified resource)
+- **500 Error**: `/api/chat` endpoint failure
+
+### Root Cause Analysis
+
+#### 500 Error - Chat API Failure
+**Issue**: Incorrect API key configuration
+- The `.env` file contains a Qwen API key: `sk-qwen-d55c4faade314eb4adac1404f0519a8cc1c439695493780ae06e9b54b117db1b`
+- The application expects an OpenAI API key or OpenAI-compatible endpoint
+- No `OPENAI_API_BASE_URL` is configured to redirect to Qwen's endpoint
+
+**Solution Options**:
+1. **For Qwen API**: Add `OPENAI_API_BASE_URL` pointing to Qwen's OpenAI-compatible endpoint
+2. **For OpenAI**: Replace with valid OpenAI API key (sk-proj-... or sk-...)
+3. **For Local Models**: Configure Ollama/LM Studio endpoint
+
+#### 404 Error - Missing Resource
+Needs browser console inspection to identify exact missing resource URL
+
 ## Current Implementation (as of Nov 13, 2025)
 
 ### AI Service Architecture
